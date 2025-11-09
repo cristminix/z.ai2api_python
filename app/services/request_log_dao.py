@@ -1,6 +1,6 @@
 """
-请求日志数据访问层 (DAO)
-提供请求日志的 CRUD 操作和查询功能
+Lapisan Akses Data Log Permintaan (DAO)
+Menyediakan operasi CRUD dan fungsi query untuk log permintaan
 """
 import aiosqlite
 import sqlite3
@@ -14,34 +14,34 @@ from app.utils.logger import logger
 
 
 class RequestLogDAO:
-    """请求日志数据访问对象"""
+    """Objek Akses Data Log Permintaan"""
 
     def __init__(self, db_path: str = DB_PATH):
-        """初始化 DAO"""
+        """Inisialisasi DAO"""
         self.db_path = db_path
         self._ensure_db_directory()
         self._init_db()
 
     def _ensure_db_directory(self):
-        """确保数据库目录存在"""
+        """Memastikan direktori database ada"""
         db_dir = os.path.dirname(self.db_path)
         if db_dir and not os.path.exists(db_dir):
             os.makedirs(db_dir, exist_ok=True)
 
     def _init_db(self):
-        """初始化数据库表"""
+        """Inisialisasi tabel database"""
         try:
             conn = sqlite3.connect(self.db_path)
             conn.executescript(SQL_CREATE_REQUEST_LOGS_TABLE)
             conn.commit()
             conn.close()
-            logger.debug("请求日志表初始化成功")
+            logger.debug("Tabel log permintaan berhasil diinisialisasi")
         except Exception as e:
-            logger.error(f"初始化请求日志表失败: {e}")
+            logger.error(f"Gagal menginisialisasi tabel log permintaan: {e}")
 
     @asynccontextmanager
     async def get_connection(self):
-        """获取异步数据库连接"""
+        """Mendapatkan koneksi database asinkron"""
         conn = await aiosqlite.connect(self.db_path)
         conn.row_factory = aiosqlite.Row
         try:
@@ -61,20 +61,20 @@ class RequestLogDAO:
         error_message: str = None
     ) -> int:
         """
-        添加请求日志
+        Menambahkan log permintaan
 
         Args:
-            provider: 提供商名称
-            model: 模型名称
-            success: 是否成功
-            duration: 总耗时（秒）
-            first_token_time: 首字延迟（秒）
-            input_tokens: 输入 token 数
-            output_tokens: 输出 token 数
-            error_message: 错误信息
+            provider: Nama penyedia
+            model: Nama model
+            success: Apakah berhasil
+            duration: Total waktu yang dibutuhkan (detik)
+            first_token_time: Waktu tunggu token pertama (detik)
+            input_tokens: Jumlah token input
+            output_tokens: Jumlah token output
+            error_message: Pesan error
 
         Returns:
-            日志 ID
+            ID log
         """
         total_tokens = input_tokens + output_tokens
 
@@ -100,16 +100,16 @@ class RequestLogDAO:
         success: bool = None
     ) -> List[Dict]:
         """
-        获取最近的请求日志
+        Mendapatkan log permintaan terbaru
 
         Args:
-            limit: 返回数量限制
-            provider: 过滤提供商
-            model: 过滤模型
-            success: 过滤成功/失败状态
+            limit: Batas jumlah yang dikembalikan
+            provider: Filter penyedia
+            model: Filter model
+            success: Filter status berhasil/gagal
 
         Returns:
-            日志列表
+            Daftar log
         """
         query = "SELECT * FROM request_logs WHERE 1=1"
         params = []
@@ -142,16 +142,16 @@ class RequestLogDAO:
         model: str = None
     ) -> List[Dict]:
         """
-        按时间范围获取日志
+        Mendapatkan log berdasarkan rentang waktu
 
         Args:
-            start_time: 开始时间
-            end_time: 结束时间
-            provider: 过滤提供商
-            model: 过滤模型
+            start_time: Waktu mulai
+            end_time: Waktu selesai
+            provider: Filter penyedia
+            model: Filter model
 
         Returns:
-            日志列表
+            Daftar log
         """
         query = "SELECT * FROM request_logs WHERE timestamp BETWEEN ? AND ?"
         params = [start_time.isoformat(), end_time.isoformat()]
@@ -173,13 +173,13 @@ class RequestLogDAO:
 
     async def get_model_stats_from_db(self, hours: int = 24) -> Dict:
         """
-        从数据库获取模型统计（最近N小时）
+        Mendapatkan statistik model dari database (N jam terakhir)
 
         Args:
-            hours: 小时数
+            hours: Jumlah jam
 
         Returns:
-            模型统计数据
+            Data statistik model
         """
         start_time = datetime.now() - timedelta(hours=hours)
 
@@ -224,13 +224,13 @@ class RequestLogDAO:
 
     async def delete_old_logs(self, days: int = 30) -> int:
         """
-        删除旧日志
+        Menghapus log lama
 
         Args:
-            days: 保留天数
+            days: Jumlah hari yang dipertahankan
 
         Returns:
-            删除的记录数
+            Jumlah record yang dihapus
         """
         cutoff_time = datetime.now() - timedelta(days=days)
 
@@ -243,16 +243,16 @@ class RequestLogDAO:
             return cursor.rowcount
 
 
-# 全局单例实例
+# Instance singleton global
 _request_log_dao: Optional[RequestLogDAO] = None
 
 
 def get_request_log_dao() -> RequestLogDAO:
     """
-    获取请求日志 DAO 单例
+    Mendapatkan singleton DAO log permintaan
 
     Returns:
-        RequestLogDAO 实例
+        Instance RequestLogDAO
     """
     global _request_log_dao
     if _request_log_dao is None:
@@ -261,7 +261,7 @@ def get_request_log_dao() -> RequestLogDAO:
 
 
 def init_request_log_dao():
-    """初始化请求日志 DAO"""
+    """Inisialisasi DAO log permintaan"""
     global _request_log_dao
     _request_log_dao = RequestLogDAO()
     return _request_log_dao

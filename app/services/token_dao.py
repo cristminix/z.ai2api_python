@@ -1,6 +1,6 @@
 """
-Token 数据访问层 (DAO)
-提供 Token 的 CRUD 操作和查询功能
+Lapisan Akses Data Token (DAO)
+Menyediakan operasi CRUD dan fungsi query untuk Token
 """
 import aiosqlite
 import sqlite3
@@ -14,26 +14,26 @@ from app.utils.logger import logger
 
 
 class TokenDAO:
-    """Token 数据访问对象"""
+    """Objek Akses Data Token"""
 
     def __init__(self, db_path: str = DB_PATH):
-        """初始化 DAO"""
+        """Inisialisasi DAO"""
         self.db_path = db_path
         self._ensure_db_directory()
 
     def _ensure_db_directory(self):
-        """确保数据库目录存在"""
+        """Memastikan direktori database ada"""
         db_dir = os.path.dirname(self.db_path)
         if db_dir and not os.path.exists(db_dir):
             os.makedirs(db_dir, exist_ok=True)
 
     @asynccontextmanager
     async def get_connection(self):
-        """获取异步数据库连接"""
+        """Mendapatkan koneksi database asinkron"""
         conn = await aiosqlite.connect(self.db_path)
-        conn.row_factory = aiosqlite.Row  # 返回字典式结果
+        conn.row_factory = aiosqlite.Row  # Mengembalikan hasil seperti kamus
 
-        # 启用外键约束（SQLite 默认关闭）
+        # Mengaktifkan batasan foreign key (SQLite dinonaktifkan secara default)
         await conn.execute("PRAGMA foreign_keys = ON")
 
         try:
@@ -42,25 +42,25 @@ class TokenDAO:
             await conn.close()
 
     def get_sync_connection(self):
-        """获取同步数据库连接（用于初始化）"""
+        """Mendapatkan koneksi database sinkron (untuk inisialisasi)"""
         conn = sqlite3.connect(self.db_path)
-        # 启用外键约束
+        # Mengaktifkan batasan foreign key
         conn.execute("PRAGMA foreign_keys = ON")
         return conn
 
     async def init_database(self):
-        """初始化数据库表结构"""
+        """Inisialisasi struktur tabel database"""
         try:
-            # 使用同步连接创建表（避免异步初始化问题）
+            # Menggunakan koneksi sinkron untuk membuat tabel (menghindari masalah inisialisasi asinkron)
             conn = self.get_sync_connection()
             conn.executescript(SQL_CREATE_TABLES)
             conn.commit()
             conn.close()
         except Exception as e:
-            logger.error(f"❌ Token 数据库初始化失败: {e}")
+            logger.error(f"❌ Gagal menginisialisasi database Token: {e}")
             raise
 
-    # ==================== Token CRUD 操作 ====================
+    # ==================== Operasi CRUD Token ====================
 
     async def add_token(
         self,
@@ -71,36 +71,36 @@ class TokenDAO:
         validate: bool = True
     ) -> Optional[int]:
         """
-        添加新 Token（可选验证）
+        Menambahkan Token baru (validasi opsional)
 
         Args:
-            provider: 提供商名称
-            token: Token 值
-            token_type: Token 类型（如果 validate=True 将被验证结果覆盖）
-            priority: 优先级
-            validate: 是否验证 Token（仅针对 zai 提供商）
+            provider: Nama penyedia
+            token: Nilai Token
+            token_type: Tipe Token (akan ditimpa oleh hasil validasi jika validate=True)
+            priority: Prioritas
+            validate: Apakah akan memvalidasi Token (hanya untuk penyedia zai)
 
         Returns:
-            token_id 或 None（验证失败或已存在）
+            token_id atau None (validasi gagal atau sudah ada)
         """
         try:
-            # 对于 zai 提供商，强制验证 Token
+            # Untuk penyedia zai, validasi Token secara paksa
             if provider == "zai" and validate:
                 from app.utils.token_pool import ZAITokenValidator
 
                 validated_type, is_valid, error_msg = await ZAITokenValidator.validate_token(token)
 
-                # 拒绝 guest token
+                # Tolak token tamu
                 if validated_type == "guest":
-                    logger.warning(f"🚫 拒绝添加匿名用户 Token: {token[:20]}... - {error_msg}")
+                    logger.warning(f"🚫 Menolak menambahkan Token pengguna anonim: {token[:20]}... - {error_msg}")
                     return None
 
-                # 拒绝无效 token
+                # Tolak token tidak valid
                 if not is_valid:
-                    logger.warning(f"🚫 Token 验证失败: {token[:20]}... - {error_msg}")
+                    logger.warning(f"🚫 Validasi Token gagal: {token[:20]}... - {error_msg}")
                     return None
 
-                # 使用验证后的类型
+                # Gunakan tipe yang sudah divalidasi
                 token_type = validated_type
 
             async with self.get_connection() as conn:
@@ -112,28 +112,28 @@ class TokenDAO:
                 await conn.commit()
 
                 if cursor.lastrowid > 0:
-                    # 同时创建统计记录
+                    # Buat juga catatan statistik
                     await conn.execute("""
                         INSERT INTO token_stats (token_id)
                         VALUES (?)
                     """, (cursor.lastrowid,))
                     await conn.commit()
-                    logger.info(f"✅ 添加 Token: {provider} ({token_type}) - {token[:20]}...")
+                    logger.info(f"✅ Token ditambahkan: {provider} ({token_type}) - {token[:20]}...")
                     return cursor.lastrowid
                 else:
-                    logger.warning(f"⚠️ Token 已存在: {provider} - {token[:20]}...")
+                    logger.warning(f"⚠️ Token sudah ada: {provider} - {token[:20]}...")
                     return None
         except Exception as e:
-            logger.error(f"❌ 添加 Token 失败: {e}")
+            logger.error(f"❌ Gagal menambahkan Token: {e}")
             return None
 
     async def get_tokens_by_provider(self, provider: str, enabled_only: bool = True) -> List[Dict]:
         """
-        获取指定提供商的所有 Token
+        Mendapatkan semua Token dari penyedia tertentu
 
         Args:
-            provider: 提供商名称
-            enabled_only: 是否只返回启用的 Token
+            provider: Nama penyedia
+            enabled_only: Apakah hanya mengembalikan Token yang diaktifkan
         """
         try:
             async with self.get_connection() as conn:
@@ -156,11 +156,11 @@ class TokenDAO:
 
                 return [dict(row) for row in rows]
         except Exception as e:
-            logger.error(f"❌ 查询 Token 失败: {e}")
+            logger.error(f"❌ Gagal mengkueri Token: {e}")
             return []
 
     async def get_all_tokens(self, enabled_only: bool = False) -> List[Dict]:
-        """获取所有 Token"""
+        """Mendapatkan semua Token"""
         try:
             async with self.get_connection() as conn:
                 query = """
@@ -180,57 +180,57 @@ class TokenDAO:
 
                 return [dict(row) for row in rows]
         except Exception as e:
-            logger.error(f"❌ 查询所有 Token 失败: {e}")
+            logger.error(f"❌ Gagal mengkueri semua Token: {e}")
             return []
 
     async def update_token_status(self, token_id: int, is_enabled: bool):
-        """更新 Token 启用状态"""
+        """Memperbarui status aktif Token"""
         try:
             async with self.get_connection() as conn:
                 await conn.execute("""
                     UPDATE tokens SET is_enabled = ? WHERE id = ?
                 """, (is_enabled, token_id))
                 await conn.commit()
-                logger.info(f"✅ 更新 Token 状态: id={token_id}, enabled={is_enabled}")
+                logger.info(f"✅ Status Token diperbarui: id={token_id}, enabled={is_enabled}")
         except Exception as e:
-            logger.error(f"❌ 更新 Token 状态失败: {e}")
+            logger.error(f"❌ Gagal memperbarui status Token: {e}")
 
     async def update_token_type(self, token_id: int, token_type: str):
-        """更新 Token 类型"""
+        """Memperbarui tipe Token"""
         try:
             async with self.get_connection() as conn:
                 await conn.execute("""
                     UPDATE tokens SET token_type = ? WHERE id = ?
                 """, (token_type, token_id))
                 await conn.commit()
-                logger.info(f"✅ 更新 Token 类型: id={token_id}, type={token_type}")
+                logger.info(f"✅ Tipe Token diperbarui: id={token_id}, type={token_type}")
         except Exception as e:
-            logger.error(f"❌ 更新 Token 类型失败: {e}")
+            logger.error(f"❌ Gagal memperbarui tipe Token: {e}")
 
     async def delete_token(self, token_id: int):
-        """删除 Token（级联删除统计数据）"""
+        """Menghapus Token (penghapusan berjenjang data statistik)"""
         try:
             async with self.get_connection() as conn:
                 await conn.execute("DELETE FROM tokens WHERE id = ?", (token_id,))
                 await conn.commit()
-                logger.info(f"✅ 删除 Token: id={token_id}")
+                logger.info(f"✅ Token dihapus: id={token_id}")
         except Exception as e:
-            logger.error(f"❌ 删除 Token 失败: {e}")
+            logger.error(f"❌ Gagal menghapus Token: {e}")
 
     async def delete_tokens_by_provider(self, provider: str):
-        """删除指定提供商的所有 Token"""
+        """Menghapus semua Token dari penyedia tertentu"""
         try:
             async with self.get_connection() as conn:
                 await conn.execute("DELETE FROM tokens WHERE provider = ?", (provider,))
                 await conn.commit()
-                logger.info(f"✅ 删除提供商所有 Token: {provider}")
+                logger.info(f"✅ Semua Token penyedia dihapus: {provider}")
         except Exception as e:
-            logger.error(f"❌ 删除提供商 Token 失败: {e}")
+            logger.error(f"❌ Gagal menghapus Token penyedia: {e}")
 
-    # ==================== Token 统计操作 ====================
+    # ==================== Operasi Statistik Token ====================
 
     async def record_success(self, token_id: int):
-        """记录 Token 使用成功"""
+        """Mencatat keberhasilan penggunaan Token"""
         try:
             async with self.get_connection() as conn:
                 await conn.execute("""
@@ -242,10 +242,10 @@ class TokenDAO:
                 """, (token_id,))
                 await conn.commit()
         except Exception as e:
-            logger.error(f"❌ 记录成功失败: {e}")
+            logger.error(f"❌ Gagal mencatat keberhasilan: {e}")
 
     async def record_failure(self, token_id: int):
-        """记录 Token 使用失败"""
+        """Mencatat kegagalan penggunaan Token"""
         try:
             async with self.get_connection() as conn:
                 await conn.execute("""
@@ -257,10 +257,10 @@ class TokenDAO:
                 """, (token_id,))
                 await conn.commit()
         except Exception as e:
-            logger.error(f"❌ 记录失败失败: {e}")
+            logger.error(f"❌ Gagal mencatat kegagalan: {e}")
 
     async def get_token_stats(self, token_id: int) -> Optional[Dict]:
-        """获取 Token 统计信息"""
+        """Mendapatkan informasi statistik Token"""
         try:
             async with self.get_connection() as conn:
                 cursor = await conn.execute("""
@@ -269,10 +269,10 @@ class TokenDAO:
                 row = await cursor.fetchone()
                 return dict(row) if row else None
         except Exception as e:
-            logger.error(f"❌ 获取统计信息失败: {e}")
+            logger.error(f"❌ Gagal mendapatkan informasi statistik: {e}")
             return None
 
-    # ==================== 批量操作 ====================
+    # ==================== Operasi Batch ====================
 
     async def bulk_add_tokens(
         self,
@@ -282,16 +282,16 @@ class TokenDAO:
         validate: bool = True
     ) -> Tuple[int, int]:
         """
-        批量添加 Token（可选验证）
+        Menambahkan Token secara massal (validasi opsional)
 
         Args:
-            provider: 提供商名称
-            tokens: Token 列表
-            token_type: Token 类型（如果 validate=True 将被覆盖）
-            validate: 是否验证 Token（仅针对 zai）
+            provider: Nama penyedia
+            tokens: Daftar Token
+            token_type: Tipe Token (akan ditimpa jika validate=True)
+            validate: Apakah akan memvalidasi Token (hanya untuk zai)
 
         Returns:
-            (成功添加数量, 失败数量)
+            (Jumlah yang berhasil ditambahkan, Jumlah yang gagal)
         """
         added_count = 0
         failed_count = 0
@@ -309,13 +309,13 @@ class TokenDAO:
                 else:
                     failed_count += 1
 
-        logger.info(f"✅ 批量添加完成: {provider} - 成功 {added_count}/{len(tokens)}，失败 {failed_count}")
+        logger.info(f"✅ Penambahan massal selesai: {provider} - Berhasil {added_count}/{len(tokens)}, Gagal {failed_count}")
         return added_count, failed_count
 
     async def replace_tokens(self, provider: str, tokens: List[str],
                             token_type: str = "user"):
         """
-        替换指定提供商的所有 Token（先删除后添加）
+        Mengganti semua Token dari penyedia tertentu (hapus dulu, lalu tambahkan)
         """
         # 删除旧 Token
         await self.delete_tokens_by_provider(provider)
@@ -323,13 +323,13 @@ class TokenDAO:
         # 添加新 Token
         added_count = await self.bulk_add_tokens(provider, tokens, token_type)
 
-        logger.info(f"✅ 替换 Token 完成: {provider} - {added_count} 个")
+        logger.info(f"✅ Penggantian Token selesai: {provider} - {added_count} buah")
         return added_count
 
-    # ==================== 实用方法 ====================
+    # ==================== Metode Utilitas ====================
 
     async def get_token_by_value(self, provider: str, token: str) -> Optional[Dict]:
-        """根据 Token 值查询"""
+        """Mencari berdasarkan nilai Token"""
         try:
             async with self.get_connection() as conn:
                 cursor = await conn.execute("""
@@ -341,11 +341,11 @@ class TokenDAO:
                 row = await cursor.fetchone()
                 return dict(row) if row else None
         except Exception as e:
-            logger.error(f"❌ 查询 Token 失败: {e}")
+            logger.error(f"❌ Gagal mengkueri Token: {e}")
             return None
 
     async def get_provider_stats(self, provider: str) -> Dict:
-        """获取提供商统计信息"""
+        """Mendapatkan informasi statistik penyedia"""
         try:
             async with self.get_connection() as conn:
                 cursor = await conn.execute("""
@@ -362,20 +362,20 @@ class TokenDAO:
                 row = await cursor.fetchone()
                 return dict(row) if row else {}
         except Exception as e:
-            logger.error(f"❌ 获取提供商统计失败: {e}")
+            logger.error(f"❌ Gagal mendapatkan statistik penyedia: {e}")
             return {}
 
-    # ==================== Token 验证操作 ====================
+    # ==================== Operasi Validasi Token ====================
 
     async def validate_and_update_token(self, token_id: int) -> bool:
         """
-        验证单个 Token 并更新其类型
+        Memvalidasi Token tunggal dan memperbarui tipenya
 
         Args:
-            token_id: Token 数据库 ID
+            token_id: ID database Token
 
         Returns:
-            是否为有效的认证用户 Token
+            Apakah Token pengguna yang terautentikasi valid
         """
         try:
             # 获取 Token 信息
@@ -386,15 +386,15 @@ class TokenDAO:
                 row = await cursor.fetchone()
 
                 if not row:
-                    logger.error(f"❌ Token ID {token_id} 不存在")
+                    logger.error(f"❌ Token ID {token_id} tidak ada")
                     return False
 
                 provider = row["provider"]
                 token = row["token"]
 
-            # 仅对 zai 提供商验证
+            # Hanya validasi untuk penyedia zai
             if provider != "zai":
-                logger.info(f"⏭️ 跳过非 zai 提供商的 Token 验证: {provider}")
+                logger.info(f"⏭️ Melewati validasi Token untuk penyedia non-zai: {provider}")
                 return True
 
             # 验证 Token
@@ -406,32 +406,32 @@ class TokenDAO:
             await self.update_token_type(token_id, token_type)
 
             if not is_valid:
-                logger.warning(f"⚠️ Token 验证失败: id={token_id}, type={token_type}, error={error_msg}")
+                logger.warning(f"⚠️ Validasi Token gagal: id={token_id}, type={token_type}, error={error_msg}")
 
             return is_valid
 
         except Exception as e:
-            logger.error(f"❌ 验证 Token 失败: {e}")
+            logger.error(f"❌ Gagal memvalidasi Token: {e}")
             return False
 
     async def validate_all_tokens(self, provider: str = "zai") -> Dict[str, int]:
         """
-        批量验证所有 Token
+        Memvalidasi semua Token secara massal
 
         Args:
-            provider: 提供商名称（默认 zai）
+            provider: Nama penyedia (default zai)
 
         Returns:
-            统计结果 {"valid": 数量, "guest": 数量, "invalid": 数量}
+            Hasil statistik {"valid": jumlah, "guest": jumlah, "invalid": jumlah}
         """
         try:
             tokens = await self.get_tokens_by_provider(provider, enabled_only=False)
 
             if not tokens:
-                logger.warning(f"⚠️ 没有需要验证的 {provider} Token")
+                logger.warning(f"⚠️ Tidak ada Token {provider} yang perlu divalidasi")
                 return {"valid": 0, "guest": 0, "invalid": 0}
 
-            logger.info(f"🔍 开始批量验证 {len(tokens)} 个 {provider} Token...")
+            logger.info(f"🔍 Memulai validasi massal {len(tokens)} Token {provider}...")
 
             stats = {"valid": 0, "guest": 0, "invalid": 0}
 
@@ -454,20 +454,20 @@ class TokenDAO:
                 else:
                     stats["invalid"] += 1
 
-            logger.info(f"✅ 批量验证完成: 有效 {stats['valid']}, 匿名 {stats['guest']}, 无效 {stats['invalid']}")
+            logger.info(f"✅ Validasi massal selesai: Valid {stats['valid']}, Tamu {stats['guest']}, Tidak Valid {stats['invalid']}")
             return stats
 
         except Exception as e:
-            logger.error(f"❌ 批量验证失败: {e}")
+            logger.error(f"❌ Validasi massal gagal: {e}")
             return {"valid": 0, "guest": 0, "invalid": 0}
 
 
-# 全局单例
+# Singleton global
 _token_dao: Optional[TokenDAO] = None
 
 
 def get_token_dao() -> TokenDAO:
-    """获取全局 TokenDAO 实例"""
+    """Mendapatkan instance TokenDAO global"""
     global _token_dao
     if _token_dao is None:
         _token_dao = TokenDAO()
@@ -475,6 +475,6 @@ def get_token_dao() -> TokenDAO:
 
 
 async def init_token_database():
-    """初始化 Token 数据库"""
+    """Inisialisasi database Token"""
     dao = get_token_dao()
     await dao.init_database()
