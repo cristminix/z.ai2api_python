@@ -1,75 +1,75 @@
-# OpenAI 代理服务
+# Layanan Proxy OpenAI
 
-![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+![Lisensi: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python: 3.9-3.12](https://img.shields.io/badge/python-3.9--3.12-green.svg)
 ![FastAPI](https://img.shields.io/badge/framework-FastAPI-009688.svg)
 
-基于 FastAPI 的高性能 OpenAI API 兼容代理服务，采用多提供商架构设计，支持 Z.AI（GLM-4.5/4.6 系列）、K2Think、LongCat 等多种 AI 模型。
+Layanan proxy kompatibel OpenAI API berbasis FastAPI dengan arsitektur multi-penyedia, mendukung berbagai model AI seperti Z.AI (GLM-4.5/4.6 Series), K2Think, dan LongCat.
 
-## ✨ 核心特性
+## ✨ Fitur Utama
 
-- 🔌 **OpenAI API 兼容** - 无缝对接现有 OpenAI 客户端
-- 🏗️ **多提供商架构** - 统一接口支持 Z.AI、K2Think、LongCat
-- 🧬 **数据库管理** - SQLite + Web 后台统一管理 Token
-- 🚀 **流式响应** - 高性能 SSE 实时流式输出
-- 🧠 **思考模式** - 支持 Thinking 模型的推理过程展示
-- 🐳 **容器化部署** - Docker/Docker Compose 一键部署
-- 🔄 **Token 池** - 智能轮询、容错恢复、健康检查
-- 📊 **管理后台** - 实时监控、配置管理
-- 🔐 **安全认证** - 密码保护的管理后台访问
+- 🔌 **Kompatibel OpenAI API** - Integrasi langsung dengan klien OpenAI yang ada
+- 🏗️ **Arsitektur Multi-Penyedia** - Antarmuka seragam untuk Z.AI, K2Think, LongCat
+- 🧬 **Manajemen Database** - SQLite + Dasbor Web untuk manajemen Token
+- 🚀 **Responsa Streaming** - Output streaming SSE real-time berperforma tinggi
+- 🧠 **Mode Berpikir** - Mendukung proses inferensi model Thinking
+- 🐳 **Deployment Kontainer** - Satu klik deployment dengan Docker/Docker Compose
+- 🔄 **Pool Token** - Rotasi cerdas, pemulihan kesalahan, pemeriksaan kesehatan
+- 📊 **Dasbor Administrasi** - Monitoring real-time, manajemen konfigurasi
+- 🔐 **Otentikasi Keamanan** - Akses dasbor administrasi dilindungi kata sandi
 
-❤️ 感谢各位的反馈推动项目改进！
+Terima kasih atas umpan balik semua yang mendorong perbaikan proyek!
 
-## 🚀 快速开始
+## 🚀 Memulai Cepat
 
-### 环境要求
+### Persyaratan Lingkungan
 
 - Python 3.9-3.12
-- pip 或 uv (推荐)
+- pip atau uv (disarankan)
 
-### 本地运行
+### Jalankan Lokal
 
 ```bash
-# 1. 克隆项目
+# 1. Clone proyek
 git clone https://github.com/ZyphrZero/z.ai2api_python.git
 cd z.ai2api_python
 
-# 2. 安装依赖（使用 uv 推荐）
+# 2. Instal dependensi (menggunakan uv disarankan)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync
 
-# 或使用 pip
+# atau menggunakan pip
 pip install -r requirements.txt
 
-# 3. 配置环境变量
+# 3. Konfigurasi variabel lingkungan
 cp .env.example .env
-# 编辑 .env 文件，设置 AUTH_TOKEN 等配置
+# Edit file .env, atur AUTH_TOKEN dan konfigurasi lainnya
 
-# 4. 启动服务
-uv run python main.py  # 或 python main.py
+# 4. Jalankan layanan
+uv run python main.py  # atau python main.py
 ```
 
-**首次运行会自动初始化数据库**，访问以下地址：
-- API 文档：http://localhost:8080/docs
-- 管理后台：http://localhost:8080/admin（**需要登录**）
-- Token 管理：http://localhost:8080/admin/tokens
+**Saat pertama kali dijalankan akan secara otomatis menginisialisasi database**, akses alamat berikut:
+- Dokumentasi API: http://localhost:8080/docs
+- Dasbor administrasi: http://localhost:8080/admin (**membutuhkan login**)
+- Manajemen Token: http://localhost:8080/admin/tokens
 
-> ⚠️ **重要**：
-> - 请妥善保管 `AUTH_TOKEN`，不要泄露给他人
-> - 管理后台默认密码为 `admin123`，**首次使用后请立即修改**
+> ⚠️ **Penting**:
+> - Jaga kerahasiaan `AUTH_TOKEN`, jangan berikan kepada orang lain
+> - Kata sandi dasbor administrasi default adalah `admin123`, **segera ubah setelah penggunaan pertama**
 
-### Docker 部署
+### Deployment Docker
 
-从 Docker Hub 拉取镜像：
+Tarik image dari Docker Hub:
 
 ```bash
-# 拉取最新镜像
+# Tarik image terbaru
 docker pull zyphrzero/z-ai2api-python:latest
 
-# 快速启动（创建数据目录）
+# Jalankan cepat (buat direktori data)
 mkdir -p data logs
 
-# 运行容器
+# Jalankan kontainer
 docker run -d \
   --name z-ai-api-server \
   -p 8080:8080 \
@@ -83,265 +83,264 @@ docker run -d \
   zyphrzero/z-ai2api-python:latest
 ```
 
-启动服务：
+Jalankan layanan:
 
 ```bash
 docker compose up -d
 ```
 
-#### 方式二：本地构建
+#### Cara Kedua: Build Lokal
 
 ```bash
-# 进入部署目录
+# Masuk ke direktori deployment
 cd deploy
 
-# 启动服务（会自动构建镜像）
+# Jalankan layanan (akan otomatis build image)
 docker compose up -d
 
-# 查看日志
+# Lihat log
 docker compose logs -f api-server
 ```
 
-#### 数据持久化
+#### Persistensi Data
 
-容器使用卷映射自动持久化数据：
+Kontainer menggunakan mapping volume untuk persistensi data otomatis:
 
 ```
-data/                  # 数据库文件存储目录
-├── tokens.db          # SQLite 数据库（自动创建）
-logs/                  # 日志文件存储目录
+data/                  # Direktori penyimpanan file database
+├── tokens.db          # Database SQLite (dibuat otomatis)
+logs/                  # Direktori penyimpanan file log
 ```
 
-数据在容器重启或重建后仍然保留，无需担心丢失。
+Data tetap ada setelah restart atau rebuild kontainer, tidak perlu khawatir kehilangan data.
 
-> 📖 **详细文档**：[Docker 部署指南](deploy/README_DOCKER.md)
+> 📖 **Dokumentasi Lengkap**: [Panduan Deployment Docker](deploy/README_DOCKER.md)
 
-## 📖 支持的模型
+## 📖 Model yang Didukung
 
-### Z.AI 提供商（GLM 系列）
+### Penyedia Z.AI (Seri GLM)
 
-| 模型 | 上游 ID | 特性 |
+| Model | ID Asal | Fitur |
 |------|---------|------|
-| `GLM-4.5` | 0727-360B-API | 标准模型，通用对话 |
-| `GLM-4.5-Thinking` | 0727-360B-API | 思考模型，显示推理过程 |
-| `GLM-4.5-Search` | 0727-360B-API | 搜索模型，实时联网 |
-| `GLM-4.5-Air` | 0727-106B-API | 轻量模型，快速响应 |
-| `GLM-4.5V` | glm-4.5v | 多模态模型，支持图像理解 |
-| `GLM-4.6` | GLM-4-6-API-V1 | 新版标准模型，200K 上下文 |
-| `GLM-4.6-Thinking` | GLM-4-6-API-V1 | 新版思考模型，增强推理 |
-| `GLM-4.6-Search` | GLM-4-6-API-V1 | 新版搜索模型，改进联网能力 |
-| `GLM-4.6-advanced-search` | GLM-4-6-API-V1 | 高级搜索模型，深度研究 |
+| `GLM-4.5` | 0727-360B-API | Model standar, percakapan umum |
+| `GLM-4.5-Thinking` | 0727-360B-API | Model berpikir, tampilkan proses inferensi |
+| `GLM-4.5-Search` | 0727-360B-API | Model pencarian, koneksi internet real-time |
+| `GLM-4.5-Air` | 0727-106B-API | Model ringan, respons cepat |
+| `GLM-4.5V` | glm-4.5v | Model multimodal, dukungan pemahaman gambar |
+| `GLM-4.6` | GLM-4-6-API-V1 | Model standar versi baru, konteks 200K |
+| `GLM-4.6-Thinking` | GLM-4-6-API-V1 | Model berpikir versi baru, inferensi ditingkatkan |
+| `GLM-4.6-Search` | GLM-4-6-API-V1 | Model pencarian versi baru, kemampuan koneksi ditingkatkan |
+| `GLM-4.6-advanced-search` | GLM-4-6-API-V1 | Model pencarian lanjutan, penelitian mendalam |
 
-### K2Think 提供商
+### Penyedia K2Think
 
-| 模型 | 特性 |
+| Model | Fitur |
 |------|------|
-| `MBZUAI-IFM/K2-Think` | 高质量推理模型 |
+| `MBZUAI-IFM/K2-Think` | Model inferensi kualitas tinggi |
 
-### LongCat 提供商
+### Penyedia LongCat
 
-| 模型 | 特性 |
+| Model | Fitur |
 |------|------|
-| `LongCat-Flash` | 快速响应 |
-| `LongCat` | 标准模型 |
-| `LongCat-Search` | 搜索增强 |
+| `LongCat-Flash` | Respons cepat |
+| `LongCat` | Model standar |
+| `LongCat-Search` | Peningkatan pencarian |
 
-## ⚙️ 配置说明
+## ⚙️ Penjelasan Konfigurasi
 
-### 核心环境变量
+### Variabel Lingkungan Utama
 
-| 变量名 | 默认值 | 说明 |
+| Nama Variabel | Nilai Default | Penjelasan |
 |--------|--------|------|
-| `AUTH_TOKEN` | `sk-your-api-key` | 客户端访问密钥（必填） |
-| `ADMIN_PASSWORD` | `admin123` | 管理后台登录密码（**强烈建议修改**） |
-| `LISTEN_PORT` | `8080` | 服务监听端口 |
-| `DEBUG_LOGGING` | `false` | 调试日志（支持热重载） |
-| `ANONYMOUS_MODE` | `true` | Z.AI 匿名模式 |
-| `TOOL_SUPPORT` | `true` | Function Call 开关 |
-| `SKIP_AUTH_TOKEN` | `false` | 跳过认证（仅开发） |
-| `DB_PATH` | `tokens.db` | 数据库文件路径（Docker: `/app/data/tokens.db`） |
+| `AUTH_TOKEN` | `sk-your-api-key` | Kunci akses klien (wajib) |
+| `ADMIN_PASSWORD` | `admin123` | Kata sandi login dasbor administrasi (**sangat disarankan untuk diubah**) |
+| `LISTEN_PORT` | `8080` | Port layanan |
+| `DEBUG_LOGGING` | `false` | Log debug (dukung hot reload) |
+| `ANONYMOUS_MODE` | `true` | Mode anonim Z.AI |
+| `TOOL_SUPPORT` | `true` | Saklar Function Call |
+| `SKIP_AUTH_TOKEN` | `false` | Lewati otentikasi (hanya untuk pengembangan) |
+| `DB_PATH` | `tokens.db` | Jalur file database (Docker: `/app/data/tokens.db`) |
 
-### Token 配置
+### Konfigurasi Token
 
-| 变量名 | 说明 |
+| Nama Variabel | Penjelasan |
 |--------|------|
-| `LONGCAT_TOKEN` | LongCat 认证 Token（可选） |
-| `TOKEN_FAILURE_THRESHOLD` | Token 失败阈值（默认 3） |
-| `TOKEN_RECOVERY_TIMEOUT` | Token 恢复超时（默认 1800 秒） |
+| `LONGCAT_TOKEN` | Token otentikasi LongCat (opsional) |
+| `TOKEN_FAILURE_THRESHOLD` | Ambang kegagalan Token (default 3) |
+| `TOKEN_RECOVERY_TIMEOUT` | Timeout pemulihan Token (default 1800 detik) |
 
-> 💡 详细配置请参考 [.env.example](.env.example) 或 [deploy/.env.example](deploy/.env.example)
+> 💡 Konfigurasi lengkap lihat [.env.example](.env.example) atau [deploy/.env.example](deploy/.env.example)
 
-## 🔐 管理后台登录
+## 🔐 Login Dasbor Administrasi
 
-### 首次登录
+### Login Pertama Kali
 
-1. 启动服务后访问：http://localhost:8080/admin
-2. 自动跳转到登录页面
-3. 输入管理密码（默认：`admin123`）
-4. 登录成功后进入仪表盘
+1. Setelah menjalankan layanan, akses: http://localhost:8080/admin
+2. Akan otomatis dialihkan ke halaman login
+3. Masukkan kata sandi administrasi (default: `admin123`)
+4. Login berhasil masuk ke dasbor
 
-### 修改密码
+### Ubah Kata Sandi
 
-在 `.env` 文件中修改 `ADMIN_PASSWORD`：
+Ubah `ADMIN_PASSWORD` di file `.env`:
 
 ```bash
-# 使用强密码（推荐 12 位以上）
+# Gunakan kata sandi kuat (disarankan 12+ karakter)
 ADMIN_PASSWORD=Your_Secure_Password_2025!
 ```
 
-重启服务后生效。
+Restart layanan agar berlaku.
 
-### 安全特性
+### Fitur Keamanan
 
-- ✅ **Session 管理**：基于 Cookie 的安全 Session
-- ✅ **自动过期**：登录后 24 小时自动失效
-- ✅ **HttpOnly Cookie**：防止 XSS 攻击
-- ✅ **SameSite 保护**：防止 CSRF 攻击
-- ✅ **随机 Token**：使用加密安全的随机数生成
+- ✅ **Manajemen Session**: Session berbasis Cookie yang aman
+- ✅ **Kedaluwarsa Otomatis**: Login kedaluwarsa setelah 24 jam
+- ✅ **HttpOnly Cookie**: Cegah serangan XSS
+- ✅ **Perlindungan SameSite**: Cegah serangan CSRF
+- ✅ **Token Acak**: Gunakan angka acak kriptografi yang aman
 
-> 💡 详细文档：[管理后台登录功能使用说明](管理后台登录功能使用说明.md)
+> 💡 Dokumentasi lengkap: [Panduan Penggunaan Fitur Login Dasbor Administrasi](manajemen_login_dasbor_admin.md)
 
-## 🔄 Token 管理
+## 🔄 Manajemen Token
 
-### 数据库方式（推荐）
+### Metode Database (disarankan)
 
-项目使用 SQLite 数据库统一管理 Token，首次运行会自动初始化：
+Proyek menggunakan database SQLite untuk mengelola Token secara terpadu, pertama kali dijalankan akan otomatis inisialisasi:
 
 ```bash
-# 首次运行自动创建 tokens.db
+# Pertama kali dijalankan otomatis buat tokens.db
 python main.py
 
-# 访问 Web 管理后台
+# Akses dasbor web administrasi
 http://localhost:8080/admin
 ```
 
-### 管理后台功能
+### Fungsi Dasbor Administrasi
 
-- ✅ **密码保护** - 安全的登录认证
-- ✅ Token 增删改查
-- ✅ 批量导入/导出
-- ✅ 启用/禁用 Token
-- ✅ Token 有效性检测
-- ✅ 多提供商支持（Z.AI/K2Think/LongCat）
+- ✅ **Perlindungan Kata Sandi** - Otentikasi login yang aman
+- ✅ Tambah/Hapus/Edit Token
+- ✅ Impor/ekspor massal
+- ✅ Aktifkan/nonaktifkan Token
+- ✅ Deteksi validitas Token
+- ✅ Dukungan multi-penyedia (Z.AI/K2Think/LongCat)
 
-### Token 池机制
+### Mekanisme Pool Token
 
-- **负载均衡**：轮询使用多个 Token 分散请求
-- **自动容错**：Token 失败时自动切换
-- **自动恢复**：失败 Token 超时后重试
-- **智能去重**：自动检测重复 Token
-- **回退机制**：认证失败自动降级匿名模式
+- **Load Balancing**: Rotasi beberapa Token untuk distribusi permintaan
+- **Fault Tolerance Otomatis**: Otomatis beralih saat Token gagal
+- **Pemulihan Otomatis**: Ulang Token gagal setelah timeout
+- **Dedupe Cerdas**: Otomatis deteksi Token duplikat
+- **Fallback**: Otentikasi gagal otomatis downgrade ke mode anonim
 
-## ❓ 常见问题
+## ❓ Pertanyaan Umum
 
-### Q: 如何获取 AUTH_TOKEN？
-A: `AUTH_TOKEN` 是自定义的 API 密钥，用于客户端访问本服务，需在 `.env` 文件或 `docker-compose.yml` 中配置，确保客户端与服务端一致。
+### Q: Bagaimana cara mendapatkan AUTH_TOKEN?
+A: `AUTH_TOKEN` adalah kunci API kustom untuk mengakses layanan ini, perlu dikonfigurasi di file `.env` atau `docker-compose.yml`, pastikan klien dan server konsisten.
 
-### Q: 匿名模式是什么？
-A: 匿名模式使用临时 Token 访问 Z.AI，避免对话历史共享，保护隐私。设置 `ANONYMOUS_MODE=true` 启用。
+### Q: Apa itu mode anonim?
+A: Mode anonim menggunakan Token sementara untuk mengakses Z.AI, hindari berbagi riwayat percakapan, lindungi privasi. Atur `ANONYMOUS_MODE=true` untuk mengaktifkan.
 
-### Q: 如何管理 Token？
-A: 访问 Web 管理后台 http://localhost:8080/admin/tokens（需要先登录）即可增删改查 Token，支持批量导入导出。
+### Q: Bagaimana cara mengelola Token?
+A: Akses dasbor web administrasi http://localhost:8080/admin/tokens (perlu login dulu) untuk tambah/hapus/edit Token, dukung impor/ekspor massal.
 
-### Q: 忘记管理后台密码怎么办？
-A: 在 `.env` 文件或 `docker-compose.yml` 中修改 `ADMIN_PASSWORD` 为新密码，然后重启服务即可。
+### Q: Lupa kata sandi dasbor administrasi bagaimana?
+A: Di file `.env` atau `docker-compose.yml` ubah `ADMIN_PASSWORD` menjadi kata sandi baru, lalu restart layanan.
 
-### Q: Docker 部署时数据库初始化失败？
-A: 错误提示 `unable to open database file` 通常是权限问题。解决方案：
+### Q: Docker deployment gagal inisialisasi database?
+A: Pesan kesalahan `unable to open database file` biasanya masalah izin. Solusi:
 ```bash
 cd deploy
 mkdir -p ./data ./logs
 chmod 755 ./data ./logs
 docker compose down && docker compose up -d --build
 ```
-详见 [Docker 部署指南](deploy/README_DOCKER.md#故障排查)
+Lihat [Panduan Deployment Docker](deploy/README_DOCKER.md#troubleshooting) untuk detail
 
-### Q: 如何禁用管理后台登录？
-A: 当前版本暂不支持禁用登录功能。如有需要，请手动移除路由中的 `dependencies=[Depends(require_auth)]`。
+### Q: Bagaimana menonaktifkan login dasbor administrasi?
+A: Versi saat ini belum mendukung menonaktifkan fungsi login. Jika diperlukan, hapus secara manual `dependencies=[Depends(require_auth)]` dari rute.
 
+## 🔑 Dapatkan Token
 
-## 🔑 获取 Token
+### Token Z.AI
 
-### Z.AI Token
+1. Akses [Situs Web Z.AI](https://chat.z.ai) dan login
+2. Tekan F12 buka alat pengembang
+3. Masuk ke Application → Local Storage → Cookies
+4. Salin nilai `token`
 
-1. 访问 [Z.AI 官网](https://chat.z.ai) 并登录
-2. 按 F12 打开开发者工具
-3. 进入 Application → Local Storage → Cookies
-4. 复制 `token` 值
+> ⚠️ Fungsi multimodal membutuhkan Token non-anonim
 
-> ⚠️ 多模态功能需要非匿名 Token
+### Token LongCat
 
-### LongCat Token
+1. Akses [Situs Web LongCat](https://longcat.chat/) dan login akun Meituan
+2. Tekan F12 buka alat pengembang
+3. Masuk ke "Application" -> "Local Storage" -> Daftar "Cookie" cari nilai bernama `passport_token_key`
+4. Salin nilai `passport_token_key`
 
-1. 访问 [LongCat 官网](https://longcat.chat/) 并登录美团账号
-2. 按 F12 打开开发者工具
-3. 进入 "Application" -> "Local Storage" -> "Cookie"列表中找到名为`passport_token_key`的值
-4. 复制 `passport_token_key` 值
+## 🛠️ Stack Teknologi
 
-## 🛠️ 技术栈
-
-| 组件 | 技术 | 版本 | 说明 |
+| Komponen | Teknologi | Versi | Penjelasan |
 |------|------|------|------|
-| Web 框架 | [FastAPI](https://fastapi.tiangolo.com/) | 0.116.1 | 高性能异步框架 |
-| ASGI 服务器 | [Granian](https://github.com/emmett-framework/granian) | 2.5.2 | Rust 高性能服务器 |
-| HTTP 客户端 | [HTTPX](https://www.python-httpx.org/) | 0.28.1 | 异步 HTTP 客户端 |
-| 数据验证 | [Pydantic](https://pydantic.dev/) | 2.11.7 | 类型安全验证 |
-| 数据库 | SQLite (aiosqlite) | 0.20.0 | Token 存储 |
-| 模板引擎 | Jinja2 | 3.1.4 | Web 后台模板 |
-| 日志系统 | [Loguru](https://loguru.readthedocs.io/) | 0.7.3 | 结构化日志 |
+| Framework Web | [FastAPI](https://fastapi.tiangolo.com/) | 0.116.1 | Framework asinkron berperformasi tinggi |
+| Server ASGI | [Granian](https://github.com/emmett-framework/granian) | 2.5.2 | Server berperformasi tinggi Rust |
+| Klien HTTP | [HTTPX](https://www.python-httpx.org/) | 0.28.1 | Klien HTTP asinkron |
+| Validasi Data | [Pydantic](https://pydantic.dev/) | 2.11.7 | Validasi tipe aman |
+| Database | SQLite (aiosqlite) | 0.20.0 | Penyimpanan Token |
+| Mesin Template | Jinja2 | 3.1.4 | Template dasbor web |
+| Sistem Log | [Loguru](https://loguru.readthedocs.io/) | 0.7.3 | Log struktural |
 
-## 🏗️ 系统架构
+## 🏗️ Arsitektur Sistem
 
 ```
 ┌─────────────┐      ┌────────────────────────────────┐      ┌──────────────┐
-│   OpenAI    │      │      FastAPI Server            │      │   Z.AI API   │
-│   Client    │─────▶│                                │─────▶│   (GLM-4.x)  │
+│   OpenAI    │      │      Server FastAPI            │      │   API Z.AI   │
+│   Klien     │─────▶│                                │─────▶│   (GLM-4.x)  │
 └─────────────┘      │  ┌──────────────────────────┐  │      └──────────────┘
-                     │  │   Provider Router        │  │
+                     │  │   Router Penyedia        │  │
                      │  │  ┌────────┬────────────┐ │  │      ┌──────────────┐
-                     │  │  │ Z.AI   │ K2Think    │ │  │      │  K2Think API │
-                     │  │  │Provider│ Provider   │ │  │─────▶│              │
+                     │  │  │ Z.AI   │ K2Think    │ │  │      │  API K2Think │
+                     │  │  │Penyedia│ Penyedia   │ │  │─────▶│              │
                      │  │  └────────┴────────────┘ │  │      └──────────────┘
                      │  │  ┌────────────┐          │  │
                      │  │  │ LongCat    │          │  │      ┌──────────────┐
-                     │  │  │ Provider   │          │  │      │ LongCat API  │
+                     │  │  │ Penyedia   │          │  │      │ API LongCat  │
                      │  │  └────────────┘          │  │─────▶│              │
                      │  └──────────────────────────┘  │      └──────────────┘
                      │                                │
                      │  ┌──────────────────────────┐  │
-                     │  │   Web Admin Dashboard    │  │
-                     │  │   (Token/Stats/Monitor)  │  │
+                     │  │   Dasbor Admin Web       │  │
+                     │  │   (Token/Statistik/Monitor)│  │
                      │  └──────────────────────────┘  │
                      └────────────────────────────────┘
                                ↕
                           ┌─────────┐
-                          │SQLite DB│
-                          │(tokens) │
+                          │Database │
+                          │SQLite   │
                           └─────────┘
 ```
 
-## 🤝 贡献指南
+## 🤝 Panduan Kontribusi
 
-欢迎提交 Issue 和 Pull Request！请确保代码符合 PEP 8 规范。
+Selamat datang untuk mengirimkan Issue dan Pull Request! Pastikan kode sesuai dengan standar PEP 8.
 
-## ⭐ Star History
+## ⭐ Riwayat Star
 
-[![Star History Chart](https://api.star-history.com/svg?repos=ZyphrZero/z.ai2api_python&type=Date)](https://star-history.com/#ZyphrZero/z.ai2api_python&Date)
+[![Grafik Riwayat Star](https://api.star-history.com/svg?repos=ZyphrZero/z.ai2api_python&type=Date)](https://star-history.com/#ZyphrZero/z.ai2api_python&Date)
 
-## 📄 许可证
+## 📄 Lisensi
 
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件。
+Proyek ini menggunakan lisensi MIT - lihat file [LICENSE](LICENSE) untuk detail.
 
-## ⚠️ 免责声明
+## ⚠️ Penyangkalan
 
-- 本项目与 Z.AI、K2Think、LongCat 等 AI 提供商官方无关
-- 使用前请确保遵守各提供商的服务条款
-- 请勿用于商业用途或违反使用条款的场景
-- 项目仅供学习和研究使用
-- 用户需自行承担使用风险
+- Proyek ini tidak berafiliasi dengan penyedia AI resmi seperti Z.AI, K2Think, LongCat, dll.
+- Pastikan untuk mematuhi ketentuan layanan masing-masing penyedia sebelum menggunakan
+- Jangan gunakan untuk tujuan komersial atau skenario yang melanggar ketentuan penggunaan
+- Proyek ini hanya untuk pembelajaran dan penelitian
+- Pengguna harus menanggung risiko penggunaan sendiri
 
 ---
 
 <div align="center">
-Made with ❤️ by the community
+Dibuat dengan ❤️ oleh komunitas
 </div>
