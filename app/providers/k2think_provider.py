@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-K2Think 提供商适配器
+Konektor Penyedia K2Think
 """
 
 import json
@@ -20,7 +20,7 @@ logger = get_logger()
 
 
 class K2ThinkProvider(BaseProvider):
-    """K2Think 提供商"""
+    """Penyedia K2Think"""
     
     def __init__(self):
         config = ProviderConfig(
@@ -46,20 +46,20 @@ class K2ThinkProvider(BaseProvider):
         )
         super().__init__(config)
 
-        # K2Think 特定配置
+        # Konfigurasi spesifik K2Think
         self.handshake_url = "https://www.k2think.ai/guest"
         self.new_chat_url = "https://www.k2think.ai/api/v1/chats/guest/new"
         
-        # 内容解析正则表达式 - 使用DOTALL标志确保.匹配换行符
+        # Ekspresi reguler untuk parsing konten - menggunakan flag DOTALL agar . cocok dengan karakter newline
         self.reasoning_pattern = re.compile(r'<details type="reasoning"[^>]*>.*?<summary>.*?</summary>(.*?)</details>', re.DOTALL)
         self.answer_pattern = re.compile(r'<answer>(.*?)</answer>', re.DOTALL)
     
     def get_supported_models(self) -> List[str]:
-        """获取支持的模型列表"""
+        """Mendapatkan daftar model yang didukung"""
         return ["MBZUAI-IFM/K2-Think"]
     
     def parse_cookies(self, headers) -> str:
-        """解析Cookie"""
+        """Parsing Cookie"""
         cookies = []
         for key, value in headers.items():
             if key.lower() == 'set-cookie':
@@ -67,7 +67,7 @@ class K2ThinkProvider(BaseProvider):
         return '; '.join(cookies)
     
     def extract_reasoning_and_answer(self, content: str) -> tuple[str, str]:
-        """提取推理内容和答案内容"""
+        """Mengekstrak konten penalaran dan jawaban"""
         if not content:
             return "", ""
         
@@ -80,11 +80,11 @@ class K2ThinkProvider(BaseProvider):
             
             return reasoning, answer
         except Exception as e:
-            self.logger.error(f"提取K2内容错误: {e}")
+            self.logger.error(f"Kesalahan ekstraksi konten K2: {e}")
             return "", ""
     
     def calculate_delta(self, previous: str, current: str) -> str:
-        """计算内容增量"""
+        """Menghitung peningkatan konten"""
         if not previous:
             return current
         if not current or len(current) < len(previous):
@@ -92,7 +92,7 @@ class K2ThinkProvider(BaseProvider):
         return current[len(previous):]
     
     def parse_api_response(self, obj: Any) -> tuple[str, bool]:
-        """解析API响应"""
+        """Parsing respons API"""
         if not obj or not isinstance(obj, dict):
             return "", False
         
@@ -111,10 +111,10 @@ class K2ThinkProvider(BaseProvider):
         return "", False
     
     async def get_k2_auth_data(self, request: OpenAIRequest) -> Dict[str, Any]:
-        """获取K2Think认证数据"""
-        # 1. 握手请求 - 使用更简单的Accept-Encoding来避免Brotli问题
+        """Mendapatkan data otentikasi K2Think"""
+        # 1. Permintaan jabat tangan - menggunakan Accept-Encoding yang lebih sederhana untuk menghindari masalah Brotli
         headers_for_handshake = {**self.config.headers}
-        headers_for_handshake['Accept-Encoding'] = 'gzip, deflate'  # 移除br和zstd
+        headers_for_handshake['Accept-Encoding'] = 'gzip, deflate'  # menghapus br dan zstd
 
         async with httpx.AsyncClient() as client:
             handshake_response = await client.get(
@@ -124,21 +124,21 @@ class K2ThinkProvider(BaseProvider):
             )
             if not handshake_response.is_success:
                 try:
-                    # 使用httpx的text属性，它会自动处理解压缩和编码
+                    # Menggunakan properti text httpx, yang akan otomatis menangani dekompresi dan encoding
                     error_text = handshake_response.text
-                    raise Exception(f"K2 握手失败: {handshake_response.status_code} {error_text[:200]}")
+                    raise Exception(f"Gagal handshake K2: {handshake_response.status_code} {error_text[:200]}")
                 except Exception as e:
-                    raise Exception(f"K2 握手失败: {handshake_response.status_code}")
+                    raise Exception(f"Gagal handshake K2: {handshake_response.status_code}")
             
             initial_cookies = self.parse_cookies(handshake_response.headers)
         
-        # 2. 准备消息
+        # 2. Menyiapkan pesan
         prepared_messages = self.prepare_k2_messages(request.messages)
         first_user_message = next((m for m in prepared_messages if m["role"] == "user"), None)
         if not first_user_message:
-            raise Exception("没有找到用户消息来初始化对话")
+            raise Exception("Tidak menemukan pesan pengguna untuk menginisialisasi percakapan")
         
-        # 3. 创建新对话
+        # 3. Membuat percakapan baru
         message_id = str(uuid.uuid4())
         now = int(time.time() * 1000)
         model_id = request.model or "MBZUAI-IFM/K2-Think"
@@ -178,7 +178,7 @@ class K2ThinkProvider(BaseProvider):
         }
         
         headers_with_cookies = {**self.config.headers, 'Cookie': initial_cookies}
-        headers_with_cookies['Accept-Encoding'] = 'gzip, deflate'  # 移除br和zstd
+        headers_with_cookies['Accept-Encoding'] = 'gzip, deflate'  # menghapus br dan zstd
 
         async with httpx.AsyncClient() as client:
             new_chat_response = await client.post(
@@ -189,41 +189,41 @@ class K2ThinkProvider(BaseProvider):
             )
             if not new_chat_response.is_success:
                 try:
-                    # 使用httpx的text属性，它会自动处理解压缩和编码
+                    # Menggunakan properti text httpx, yang akan otomatis menangani dekompresi dan encoding
                     error_text = new_chat_response.text
                 except Exception:
                     error_text = f"Status: {new_chat_response.status_code}"
-                raise Exception(f"K2 新对话创建失败: {new_chat_response.status_code} {error_text[:200]}")
+                raise Exception(f"Gagal membuat percakapan baru K2: {new_chat_response.status_code} {error_text[:200]}")
 
             try:
                 new_chat_data = new_chat_response.json()
             except Exception as e:
-                # 如果JSON解析失败，尝试获取原始内容
+                # Jika parsing JSON gagal, coba ambil konten asli
                 try:
-                    # 使用httpx的text属性，它会自动处理解压缩和编码
+                    # Menggunakan properti text httpx, yang akan otomatis menangani dekompresi dan encoding
                     content_str = new_chat_response.text
-                    self.logger.debug(f"K2 响应原始内容: {content_str[:500]}")
-                    raise Exception(f"K2 响应JSON解析失败: {e}, 原始内容: {content_str[:200]}")
+                    self.logger.debug(f"Konten respons K2 asli: {content_str[:500]}")
+                    raise Exception(f"Gagal parsing JSON respons K2: {e}, konten asli: {content_str[:200]}")
                 except Exception as decode_error:
-                    # 如果text也失败，尝试手动处理
+                    # Jika text juga gagal, coba manual handling
                     try:
                         raw_bytes = new_chat_response.content
                         content_str = raw_bytes.decode('utf-8', errors='replace')
-                        raise Exception(f"K2 响应解析失败: {e}, 手动解码内容: {content_str[:200]}")
+                        raise Exception(f"Gagal parsing respons K2: {e}, konten decoding manual: {content_str[:200]}")
                     except Exception:
-                        raise Exception(f"K2 响应解析完全失败: {e}, 解码错误: {decode_error}")
+                        raise Exception(f"Gagal parsing respons K2 sepenuhnya: {e}, kesalahan decoding: {decode_error}")
             conversation_id = new_chat_data.get("id")
             if not conversation_id:
-                raise Exception("无法从K2 /new端点获取conversation_id")
+                raise Exception("Tidak bisa mendapatkan conversation_id dari endpoint K2 /new")
             
             chat_specific_cookies = self.parse_cookies(new_chat_response.headers)
         
-        # 4. 组合最终Cookie
+        # 4. Menggabungkan Cookie akhir
         base_cookies = [initial_cookies, chat_specific_cookies]
         base_cookies = [c for c in base_cookies if c]
         final_cookie = '; '.join(base_cookies) + '; guest_conversation_count=1'
         
-        # 5. 构建最终请求载荷
+        # 5. Membangun payload permintaan akhir
         final_payload = {
             "stream": True,
             "model": model_id,
@@ -232,7 +232,7 @@ class K2ThinkProvider(BaseProvider):
             "params": {}
         }
         
-        # 添加可选参数
+        # Menambahkan parameter opsional
         if request.temperature is not None:
             final_payload["params"]["temperature"] = request.temperature
         if request.max_tokens is not None:
@@ -246,7 +246,7 @@ class K2ThinkProvider(BaseProvider):
         }
     
     def prepare_k2_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
-        """准备K2Think消息格式"""
+        """Menyiapkan format pesan K2Think"""
         result = []
         system_content = ""
         
@@ -256,7 +256,7 @@ class K2ThinkProvider(BaseProvider):
             else:
                 content = msg.content
                 if isinstance(content, list):
-                    # 处理多模态内容，提取文本
+                    # Menangani konten multimodal, mengekstrak teks
                     text_parts = [part.text for part in content if hasattr(part, 'text') and part.text]
                     content = "\n".join(text_parts)
                 
@@ -265,7 +265,7 @@ class K2ThinkProvider(BaseProvider):
                     "content": content
                 })
         
-        # 将系统消息合并到第一个用户消息中
+        # Menggabungkan pesan sistem ke pesan pengguna pertama
         if system_content:
             first_user_idx = next((i for i, m in enumerate(result) if m["role"] == "user"), -1)
             if first_user_idx >= 0:
@@ -280,15 +280,15 @@ class K2ThinkProvider(BaseProvider):
         transformed: Dict[str, Any],
         request: OpenAIRequest
     ) -> AsyncGenerator[str, None]:
-        """处理流式请求 - 在client.stream上下文内直接处理"""
+        """Menangani permintaan stream - langsung di dalam konteks client.stream"""
         chat_id = self.create_chat_id()
         model = transformed["model"]
 
-        # 准备请求头
+        # Menyiapkan header permintaan
         headers_for_request = {**transformed["headers"]}
         headers_for_request['Accept-Encoding'] = 'gzip, deflate'
 
-        self.logger.info(f"🌊 开始K2Think流式请求")
+        self.logger.info(f"🌊 Memulai permintaan stream K2Think")
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             async with client.stream(
@@ -298,9 +298,9 @@ class K2ThinkProvider(BaseProvider):
                 json=transformed["payload"]
             ) as response:
                 if not response.is_success:
-                    error_msg = f"K2Think API 错误: {response.status_code}"
+                    error_msg = f"Kesalahan API K2Think: {response.status_code}"
                     self.log_response(False, error_msg)
-                    # 对于流式响应，我们需要yield错误信息
+                    # Untuk respons stream, kita perlu menghasilkan informasi error
                     yield await self.format_sse_chunk({
                         "error": {
                             "message": error_msg,
@@ -310,12 +310,12 @@ class K2ThinkProvider(BaseProvider):
                     })
                     return
 
-                # 发送初始角色块
+                # Mengirim blok peran awal
                 yield await self.format_sse_chunk(
                     self.create_openai_chunk(chat_id, model, {"role": "assistant"})
                 )
 
-                # 处理流式数据
+                # Menangani data stream
                 accumulated_content = ""
                 previous_reasoning = ""
                 previous_answer = ""
@@ -325,14 +325,14 @@ class K2ThinkProvider(BaseProvider):
                 try:
                     async for line in response.aiter_lines():
                         chunk_count += 1
-                        self.logger.debug(f"📦 收到数据块 #{chunk_count}: {line[:100]}...")
+                        self.logger.debug(f"📦 Menerima blok data #{chunk_count}: {line[:100]}...")
 
                         if not line.startswith("data:"):
                             continue
 
                         data_str = line[5:].strip()
                         if self._is_end_marker(data_str):
-                            self.logger.debug(f"🏁 检测到结束标记: {data_str}")
+                            self.logger.debug(f"🏁 Mendeteksi penanda akhir: {data_str}")
                             continue
 
                         content = self._parse_data_string(data_str)
@@ -342,58 +342,58 @@ class K2ThinkProvider(BaseProvider):
                         accumulated_content = content
                         current_reasoning, current_answer = self.extract_reasoning_and_answer(accumulated_content)
 
-                        # 处理推理阶段
+                        # Menangani fase penalaran
                         if reasoning_phase and current_reasoning:
                             delta = self.calculate_delta(previous_reasoning, current_reasoning)
                             if delta.strip():
-                                self.logger.debug(f"🧠 推理增量: {delta[:50]}...")
+                                self.logger.debug(f"🧠 Peningkatan penalaran: {delta[:50]}...")
                                 yield await self.format_sse_chunk(
                                     self.create_openai_chunk(chat_id, model, {"reasoning_content": delta})
                                 )
                                 previous_reasoning = current_reasoning
 
-                        # 切换到答案阶段
+                        # Beralih ke fase jawaban
                         if current_answer and reasoning_phase:
                             reasoning_phase = False
-                            self.logger.debug("🔄 切换到答案阶段")
-                            # 发送剩余的推理内容
+                            self.logger.debug("🔄 Beralih ke fase jawaban")
+                            # Mengirim konten penalaran yang tersisa
                             final_reasoning_delta = self.calculate_delta(previous_reasoning, current_reasoning)
                             if final_reasoning_delta.strip():
                                 yield await self.format_sse_chunk(
                                     self.create_openai_chunk(chat_id, model, {"reasoning_content": final_reasoning_delta})
                                 )
 
-                        # 处理答案阶段
+                        # Menangani fase jawaban
                         if not reasoning_phase and current_answer:
                             delta = self.calculate_delta(previous_answer, current_answer)
                             if delta.strip():
-                                self.logger.debug(f"💬 答案增量: {delta[:50]}...")
+                                self.logger.debug(f"💬 Peningkatan jawaban: {delta[:50]}...")
                                 yield await self.format_sse_chunk(
                                     self.create_openai_chunk(chat_id, model, {"content": delta})
                                 )
                                 previous_answer = current_answer
 
                 except Exception as e:
-                    self.logger.error(f"流式响应处理错误: {e}")
+                    self.logger.error(f"Kesalahan penanganan respons stream: {e}")
                     yield await self.format_sse_chunk({
                         "error": {
-                            "message": f"流式处理错误: {str(e)}",
+                            "message": f"Kesalahan pemrosesan stream: {str(e)}",
                             "type": "stream_error",
                             "code": "processing_error"
                         }
                     })
                     return
 
-                # 发送结束块
-                self.logger.info(f"✅ K2Think流式响应完成，共处理 {chunk_count} 个数据块")
+                # Mengirim blok akhir
+                self.logger.info(f"✅ Respons stream K2Think selesai, memproses total {chunk_count} blok data")
                 yield await self.format_sse_chunk(
                     self.create_openai_chunk(chat_id, model, {}, "stop")
                 )
                 yield await self.format_sse_done()
 
     async def transform_request(self, request: OpenAIRequest) -> Dict[str, Any]:
-        """转换OpenAI请求为K2Think格式"""
-        self.logger.info(f"🔄 转换 OpenAI 请求到 K2Think 格式: {request.model}")
+        """Mengonversi permintaan OpenAI ke format K2Think"""
+        self.logger.info(f"🔄 Mengonversi permintaan OpenAI ke format K2Think: {request.model}")
         
         auth_data = await self.get_k2_auth_data(request)
         
@@ -408,22 +408,22 @@ class K2ThinkProvider(BaseProvider):
         self,
         request: OpenAIRequest
     ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
-        """聊天完成接口"""
+        """Antarmuka pelengkap obrolan"""
         self.log_request(request)
 
         try:
-            # 转换请求
+            # Mengonversi permintaan
             transformed = await self.transform_request(request)
 
-            # 发送请求 - 使用更兼容的压缩设置
+            # Mengirim permintaan - menggunakan pengaturan kompresi yang lebih kompatibel
             headers_for_request = {**transformed["headers"]}
-            headers_for_request['Accept-Encoding'] = 'gzip, deflate'  # 移除br和zstd
+            headers_for_request['Accept-Encoding'] = 'gzip, deflate'  # menghapus br dan zstd
 
             if request.stream:
-                # 流式请求 - 直接在这里处理流式响应
+                # Permintaan stream - langsung menangani respons stream di sini
                 return self._handle_stream_request(transformed, request)
             else:
-                # 非流式请求 - 使用传统的 client.post()
+                # Permintaan non-stream - menggunakan client.post() tradisional
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     response = await client.post(
                         transformed["url"],
@@ -432,16 +432,16 @@ class K2ThinkProvider(BaseProvider):
                     )
 
                     if not response.is_success:
-                        error_msg = f"K2Think API 错误: {response.status_code}"
+                        error_msg = f"Kesalahan API K2Think: {response.status_code}"
                         self.log_response(False, error_msg)
                         return self.handle_error(Exception(error_msg))
 
-                    # 转换非流式响应
+                    # Mengonversi respons non-stream
                     return await self.transform_response(response, request, transformed)
 
         except Exception as e:
             self.log_response(False, str(e))
-            return self.handle_error(e, "请求处理")
+            return self.handle_error(e, "pemrosesan permintaan")
     
     async def transform_response(
         self,
@@ -449,20 +449,20 @@ class K2ThinkProvider(BaseProvider):
         request: OpenAIRequest,
         transformed: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """转换K2Think响应为OpenAI格式 - 仅用于非流式请求"""
+        """Mengonversi respons K2Think ke format OpenAI - hanya untuk permintaan non-stream"""
         chat_id = self.create_chat_id()
         model = transformed["model"]
 
-        # 流式请求现在由 _handle_stream_request 直接处理
-        # 这里只处理非流式请求
+        # Permintaan stream sekarang ditangani langsung oleh _handle_stream_request
+        # Di sini hanya menangani permintaan non-stream
         return await self._handle_non_stream_response(response, chat_id, model)
 
     def _is_end_marker(self, data: str) -> bool:
-        """检查是否为结束标记"""
+        """Memeriksa apakah ini adalah penanda akhir"""
         return not data or data in ["-1", "[DONE]", "DONE", "done"]
     
     def _parse_data_string(self, data_str: str) -> str:
-        """解析数据字符串"""
+        """Parsing string data"""
         try:
             obj = json.loads(data_str)
             content, is_done = self.parse_api_response(obj)
@@ -476,12 +476,12 @@ class K2ThinkProvider(BaseProvider):
         chat_id: str,
         model: str
     ) -> Dict[str, Any]:
-        """处理K2Think非流式响应"""
-        # 聚合流式内容 - 使用httpx的aiter_lines，它会自动处理解压缩
+        """Menangani respons non-stream K2Think"""
+        # Menggabungkan konten stream - menggunakan aiter_lines httpx, yang akan otomatis menangani dekompresi
         final_content = ""
 
         try:
-            # 使用aiter_lines()，httpx会自动处理压缩和编码
+            # Menggunakan aiter_lines(), httpx akan otomatis menangani kompresi dan encoding
             async for line in response.aiter_lines():
                 if not line.startswith("data:"):
                     continue
@@ -495,15 +495,15 @@ class K2ThinkProvider(BaseProvider):
                     final_content = content
 
         except Exception as e:
-            self.logger.error(f"非流式响应处理错误: {e}")
+            self.logger.error(f"Kesalahan penanganan respons non-stream: {e}")
             raise
 
-        # 提取推理内容和答案内容
+        # Mengekstrak konten penalaran dan jawaban
         reasoning, answer = self.extract_reasoning_and_answer(final_content)
 
-        # 清理内容格式
+        # Membersihkan format konten
         reasoning = reasoning.replace("\\n", "\n") if reasoning else ""
         answer = answer.replace("\\n", "\n") if answer else final_content
 
-        # 创建包含推理内容的响应
+        # Membuat respons yang berisi konten penalaran
         return self.create_openai_response_with_reasoning(chat_id, model, answer, reasoning)

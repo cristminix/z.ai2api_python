@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-提供商工厂和路由机制
-负责根据模型名称自动选择合适的提供商
+Faktori dan mekanisme routing penyedia
+Bertanggung jawab untuk secara otomatis memilih penyedia yang sesuai berdasarkan nama model
 """
 
 import time
@@ -20,33 +20,33 @@ logger = get_logger()
 
 
 class ProviderFactory:
-    """提供商工厂"""
+    """Faktori penyedia"""
     
     def __init__(self):
         self._initialized = False
         self._default_provider = "zai"
     
     def initialize(self):
-        """初始化所有提供商"""
+        """Inisialisasi semua penyedia"""
         if self._initialized:
             return
 
         try:
-            # 注册 Z.AI 提供商
+            # Mendaftarkan penyedia Z.AI
             zai_provider = ZAIProvider()
             provider_registry.register(
-                zai_provider, 
+                zai_provider,
                 zai_provider.get_supported_models()
             )
             
-            # 注册 K2Think 提供商
+            # Mendaftarkan penyedia K2Think
             k2think_provider = K2ThinkProvider()
             provider_registry.register(
                 k2think_provider,
                 k2think_provider.get_supported_models()
             )
             
-            # 注册 LongCat 提供商
+            # Mendaftarkan penyedia LongCat
             longcat_provider = LongCatProvider()
             provider_registry.register(
                 longcat_provider,
@@ -56,53 +56,53 @@ class ProviderFactory:
             self._initialized = True
             
         except Exception as e:
-            logger.error(f"❌ 提供商工厂初始化失败: {e}")
+            logger.error(f"❌ Gagal menginisialisasi faktori penyedia: {e}")
             raise
-    
+
     def get_provider_for_model(self, model: str) -> Optional[BaseProvider]:
-        """根据模型名称获取提供商"""
+        """Mendapatkan penyedia berdasarkan nama model"""
         if not self._initialized:
             self.initialize()
         
-        # 首先尝试从配置的映射中获取
+        # Pertama coba dapatkan dari pemetaan konfigurasi
         provider_mapping = settings.provider_model_mapping
         provider_name = provider_mapping.get(model)
         
         if provider_name:
             provider = provider_registry.get_provider_by_name(provider_name)
             if provider:
-                logger.debug(f"🎯 模型 {model} 映射到提供商 {provider_name}")
+                logger.debug(f"🎯 Model {model} dipetakan ke penyedia {provider_name}")
                 return provider
         
-        # 尝试从注册表中直接获取
+        # Coba langsung dari registry
         provider = provider_registry.get_provider(model)
         if provider:
-            logger.debug(f"🎯 模型 {model} 找到提供商 {provider.name}")
+            logger.debug(f"🎯 Model {model} menemukan penyedia {provider.name}")
             return provider
         
-        # 使用默认提供商
+        # Gunakan penyedia default
         default_provider = provider_registry.get_provider_by_name(self._default_provider)
         if default_provider:
-            logger.warning(f"⚠️ 模型 {model} 未找到专用提供商，使用默认提供商 {self._default_provider}")
+            logger.warning(f"⚠️ Model {model} tidak menemukan penyedia khusus, menggunakan penyedia default {self._default_provider}")
             return default_provider
         
-        logger.error(f"❌ 无法为模型 {model} 找到任何提供商")
+        logger.error(f"❌ Tidak dapat menemukan penyedia untuk model {model}")
         return None
     
     def list_supported_models(self) -> List[str]:
-        """列出所有支持的模型"""
+        """Mencantumkan semua model yang didukung"""
         if not self._initialized:
             self.initialize()
         return provider_registry.list_models()
     
     def list_providers(self) -> List[str]:
-        """列出所有提供商"""
+        """Mencantumkan semua penyedia"""
         if not self._initialized:
             self.initialize()
         return provider_registry.list_providers()
     
     def get_models_for_provider(self, provider_name: str) -> List[str]:
-        """获取指定提供商支持的模型"""
+        """Mendapatkan model yang didukung oleh penyedia tertentu"""
         if not self._initialized:
             self.initialize()
         
@@ -113,7 +113,7 @@ class ProviderFactory:
 
 
 class ProviderRouter:
-    """提供商路由器"""
+    """Router penyedia"""
     
     def __init__(self):
         self.factory = ProviderFactory()
@@ -123,13 +123,13 @@ class ProviderRouter:
         request: OpenAIRequest,
         **kwargs
     ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
-        """路由请求到合适的提供商"""
-        logger.info(f"🚦 路由请求: 模型={request.model}, 流式={request.stream}")
+        """Rute permintaan ke penyedia yang sesuai"""
+        logger.info(f"🚦 Rute permintaan: model={request.model}, stream={request.stream}")
         
-        # 获取提供商
+        # Dapatkan penyedia
         provider = self.factory.get_provider_for_model(request.model)
         if not provider:
-            error_msg = f"不支持的模型: {request.model}"
+            error_msg = f"Model tidak didukung: {request.model}"
             logger.error(f"❌ {error_msg}")
             return {
                 "error": {
@@ -139,25 +139,25 @@ class ProviderRouter:
                 }
             }
         
-        logger.info(f"✅ 使用提供商: {provider.name}")
+        logger.info(f"✅ Menggunakan penyedia: {provider.name}")
         
         try:
-            # 调用提供商处理请求
+            # Panggil penyedia untuk menangani permintaan
             result = await provider.chat_completion(request, **kwargs)
-            logger.info(f"🎉 请求处理完成: {provider.name}")
+            logger.info(f"🎉 Penanganan permintaan selesai: {provider.name}")
             return result
             
         except Exception as e:
-            error_msg = f"提供商 {provider.name} 处理请求失败: {str(e)}"
+            error_msg = f"Penyedia {provider.name} gagal menangani permintaan: {str(e)}"
             logger.error(f"❌ {error_msg}")
-            return provider.handle_error(e, "路由处理")
+            return provider.handle_error(e, "pemrosesan rute")
     
     def get_provider_for_model(self, model: str) -> Optional[Dict[str, str]]:
         """
-        获取模型对应的提供商信息
+        Dapatkan informasi penyedia yang sesuai dengan model
 
         Returns:
-            包含提供商名称的字典，例如 {"provider": "zai"}
+            Kamus berisi nama penyedia, misalnya {"provider": "zai"}
         """
         provider = self.factory.get_provider_for_model(model)
         if provider:
@@ -165,11 +165,11 @@ class ProviderRouter:
         return None
 
     def get_models_list(self) -> Dict[str, Any]:
-        """获取模型列表（OpenAI格式）"""
+        """Dapatkan daftar model (format OpenAI)"""
         models = []
         current_time = int(time.time())
 
-        # 按提供商分组获取模型
+        # Dapatkan model berdasarkan penyedia
         for provider_name in self.factory.list_providers():
             provider_models = self.factory.get_models_for_provider(provider_name)
             for model in provider_models:
@@ -186,23 +186,23 @@ class ProviderRouter:
         }
 
 
-# 全局路由器实例
+# Instance router global
 _router: Optional[ProviderRouter] = None
 
-
 def get_provider_router() -> ProviderRouter:
-    """获取全局提供商路由器"""
+    """Dapatkan router penyedia global"""
     global _router
     if _router is None:
         _router = ProviderRouter()
-        # 确保工厂已初始化
+        # Pastikan factory telah diinisialisasi
         _router.factory.initialize()
     return _router
 
 
 def initialize_providers():
-    """初始化提供商系统"""
-    logger.info("🚀 初始化提供商系统...")
+    """Inisialisasi sistem penyedia"""
+    logger.info("🚀 Inisialisasi sistem penyedia...")
     router = get_provider_router()
-    logger.info("✅ 提供商系统初始化完成")
+    logger.info("✅ Sistem penyedia selesai diinisialisasi")
     return router
+

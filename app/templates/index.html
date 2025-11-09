@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}仪表盘{% endblock %}
+{% block title %}Dashboard{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
     <!-- 页面标题 -->
     <div class="flex items-center justify-between">
-        <h2 class="text-3xl font-bold text-gray-900">仪表盘</h2>
+        <h2 class="text-3xl font-bold text-gray-900">Dashboard</h2>
         <div class="text-sm text-gray-500">
-            最后更新: <span id="last-update">{{ current_time }}</span>
+            Terakhir diperbarui: <span id="last-update">{{ current_time }}</span>
         </div>
     </div>
 
@@ -20,12 +20,13 @@
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
                         <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">运行时间</dt>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Waktu berjalan</dt>
                             <dd class="text-2xl font-semibold text-gray-900">{{ stats.uptime }}</dd>
                         </dl>
                     </div>
@@ -39,12 +40,13 @@
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
                         <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">总请求数</dt>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Jumlah total permintaan</dt>
                             <dd class="text-2xl font-semibold text-gray-900">{{ stats.total_requests }}</dd>
                         </dl>
                     </div>
@@ -58,12 +60,13 @@
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
                         <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                         </svg>
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">成功率</dt>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Tingkat keberhasilan</dt>
                             <dd class="text-2xl font-semibold text-gray-900">{{ stats.success_rate }}%</dd>
                         </dl>
                     </div>
@@ -78,28 +81,34 @@
                     <div class="flex-shrink-0">
                         {% if stats.healthy_tokens >= stats.total_tokens * 0.8 %}
                         <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         {% elif stats.healthy_tokens >= stats.total_tokens * 0.5 %}
                         <svg class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                         {% else %}
                         <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         {% endif %}
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Token 池健康度</dt>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Kesehatan kumpulan Token</dt>
                             <dd class="flex items-baseline">
-                                <span class="text-2xl font-semibold text-gray-900">{{ stats.healthy_tokens }}/{{ stats.total_tokens }}</span>
+                                <span class="text-2xl font-semibold text-gray-900">{{ stats.healthy_tokens }}/{{
+                                    stats.total_tokens }}</span>
                                 {% if stats.guest_tokens > 0 %}
-                                <span class="ml-2 text-sm font-medium text-yellow-600">({{ stats.guest_tokens }} 个匿名)</span>
+                                <span class="ml-2 text-sm font-medium text-yellow-600">({{ stats.guest_tokens }}
+                                    anonim)</span>
                                 {% endif %}
                             </dd>
-                            <dd class="mt-1 text-xs text-gray-500">可用: {{ stats.available_tokens }} | 认证: {{ stats.user_tokens }}</dd>
+                            <dd class="mt-1 text-xs text-gray-500">Tersedia: {{ stats.available_tokens }} |
+                                Terautentikasi: {{ stats.user_tokens }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -110,21 +119,21 @@
     <!-- Token 池详情 -->
     <div class="bg-white shadow rounded-lg">
         <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">Token 池状态</h3>
+            <h3 class="text-lg font-medium text-gray-900">Status kumpulan Token</h3>
         </div>
         <div class="p-6">
-            <div
-                id="token-pool-status"
-                hx-get="/admin/api/token-pool"
-                hx-trigger="load, every 5s"
-                hx-swap="innerHTML">
+            <div id="token-pool-status" hx-get="/admin/api/token-pool" hx-trigger="load, every 5s" hx-swap="innerHTML">
                 <!-- Token 池状态将通过 htmx 加载 -->
                 <div class="flex justify-center items-center py-12">
-                    <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                        viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                        </circle>
+                        <path class="opacity-75" fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
                     </svg>
-                    <span class="ml-3 text-gray-500">加载中...</span>
+                    <span class="ml-3 text-gray-500">Sedang memuat...</span>
                 </div>
             </div>
         </div>
@@ -133,27 +142,27 @@
     <!-- 最近请求日志 -->
     <div class="bg-white shadow rounded-lg">
         <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h3 class="text-lg font-medium text-gray-900">最近请求日志</h3>
+            <h3 class="text-lg font-medium text-gray-900">Log permintaan terbaru</h3>
             <div class="flex items-center space-x-2" x-data="{ autoRefresh: true }">
                 <label class="flex items-center cursor-pointer">
                     <input type="checkbox" x-model="autoRefresh" class="form-checkbox h-4 w-4 text-indigo-600">
-                    <span class="ml-2 text-sm text-gray-600">自动刷新</span>
+                    <span class="ml-2 text-sm text-gray-600">Segarkan otomatis</span>
                 </label>
             </div>
         </div>
         <div class="p-6">
-            <div
-                id="recent-logs"
-                hx-get="/admin/api/recent-logs"
-                hx-trigger="load, every 3s"
-                hx-swap="innerHTML">
+            <div id="recent-logs" hx-get="/admin/api/recent-logs" hx-trigger="load, every 3s" hx-swap="innerHTML">
                 <!-- 日志内容将通过 htmx 加载 -->
                 <div class="flex justify-center items-center py-12">
-                    <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                        viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                        </circle>
+                        <path class="opacity-75" fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
                     </svg>
-                    <span class="ml-3 text-gray-500">加载中...</span>
+                    <span class="ml-3 text-gray-500">Sedang memuat...</span>
                 </div>
             </div>
         </div>
@@ -166,7 +175,7 @@
     // 更新时间显示
     function updateTime() {
         const now = new Date();
-        document.getElementById('last-update').textContent = now.toLocaleString('zh-CN');
+        document.getElementById('last-update').textContent = now.toLocaleString('id-ID');
     }
     updateTime();
     setInterval(updateTime, 1000);

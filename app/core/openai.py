@@ -16,12 +16,12 @@ from app.utils.token_pool import get_token_pool
 logger = get_logger()
 router = APIRouter()
 
-# 全局提供商路由器实例
+# Instance router provider global
 provider_router = None
 
 
 def get_provider_router_instance():
-    """获取提供商路由器实例"""
+    """Mendapatkan instance router provider"""
     global provider_router
     if provider_router is None:
         provider_router = get_provider_router()
@@ -29,7 +29,7 @@ def get_provider_router_instance():
 
 
 def create_chunk(chat_id: str, model: str, delta: Dict[str, Any], finish_reason: str = None) -> Dict[str, Any]:
-    """创建标准的 OpenAI chunk 结构"""
+    """Membuat struktur chunk OpenAI standar"""
     return {
         "choices": [{
             "delta": delta,
@@ -46,8 +46,8 @@ def create_chunk(chat_id: str, model: str, delta: Dict[str, Any], finish_reason:
 
 
 async def handle_non_stream_response(stream_response, request: OpenAIRequest) -> JSONResponse:
-    """处理非流式响应"""
-    logger.info("📄 开始处理非流式响应")
+    """Menangani respons non-streaming"""
+    logger.info("📄 Mulai menangani respons non-streaming")
 
     # 收集所有流式数据
     full_content = []
@@ -88,7 +88,7 @@ async def handle_non_stream_response(stream_response, request: OpenAIRequest) ->
         )
     )
 
-    logger.info("✅ 非流式响应处理完成")
+    logger.info("✅ Penanganan respons non-streaming selesai")
     return JSONResponse(content=response_data.model_dump(exclude_none=True))
 
 
@@ -100,7 +100,7 @@ async def list_models():
         models_data = router_instance.get_models_list()
         return JSONResponse(content=models_data)
     except Exception as e:
-        logger.error(f"❌ 获取模型列表失败: {e}")
+        logger.error(f"❌ Gagal mendapatkan daftar model: {e}")
         # 返回默认模型列表作为后备
         current_time = int(time.time())
         fallback_response = ModelsResponse(
@@ -118,7 +118,7 @@ async def list_models():
 async def chat_completions(request: OpenAIRequest, authorization: str = Header(...)):
     """Handle chat completion requests with multi-provider architecture"""
     role = request.messages[0].role if request.messages else "unknown"
-    logger.info(f"😶‍🌫️ 收到客户端请求 - 模型: {request.model}, 流式: {request.stream}, 消息数: {len(request.messages)}, 角色: {role}, 工具数: {len(request.tools) if request.tools else 0}")
+    logger.info(f"😶‍🌫️ Menerima permintaan klien - Model: {request.model}, Streaming: {request.stream}, Jumlah pesan: {len(request.messages)}, Peran: {role}, Jumlah tools: {len(request.tools) if request.tools else 0}")
 
     # 获取提供商信息（用于统计）
     provider = "unknown"
@@ -181,5 +181,5 @@ async def chat_completions(request: OpenAIRequest, authorization: str = Header(.
         # 重新抛出 HTTP 异常
         raise
     except Exception as e:
-        logger.error(f"❌ 请求处理失败: {e}")
+        logger.error(f"❌ Gagal memproses permintaan: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

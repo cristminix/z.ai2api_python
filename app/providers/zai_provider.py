@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Z.AI 提供商适配器
+Z.AI Provider Adapter
 """
 
 import json
@@ -35,11 +35,11 @@ from app.utils.tool_call_handler import (
 logger = get_logger()
 
 def generate_uuid() -> str:
-    """生成UUID v4"""
+    """Generate UUID v4"""
     return str(uuid.uuid4())
 
 def get_zai_dynamic_headers(chat_id: str = "") -> Dict[str, str]:
-    """生成 Z.AI 特定的动态浏览器 headers"""
+    """Generate Z.AI specific dynamic browser headers"""
     browser_choices = ["chrome", "chrome", "chrome", "edge", "edge", "firefox", "safari"]
     browser_type = random.choice(browser_choices)
     user_agent = get_random_user_agent(browser_type)
@@ -71,7 +71,7 @@ def get_zai_dynamic_headers(chat_id: str = "") -> Dict[str, str]:
         "Connection": "keep-alive",
         "Cache-Control": "no-cache",
         "User-Agent": user_agent,
-        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        "Accept-Language": "id-ID,id;q=0.9,en;q=0.8",
         "X-FE-Version": fe_version,
         "Origin": "https://chat.z.ai",
     }
@@ -122,7 +122,7 @@ def _extract_user_id_from_token(token: str) -> str:
 
 
 class ZAIProvider(BaseProvider):
-    """Z.AI 提供商"""
+    """Z.AI Provider"""
     
     def __init__(self):
         config = ProviderConfig(
@@ -133,17 +133,17 @@ class ZAIProvider(BaseProvider):
         )
         super().__init__(config)
         
-        # Z.AI 特定配置
+        # Z.AI specific configuration
         self.base_url = "https://chat.z.ai"
         self.auth_url = f"{self.base_url}/api/v1/auths/"
         
-        # 模型映射
+        # Pemetaan model
         self.model_mapping = {
             settings.GLM45_MODEL: "0727-360B-API",  # GLM-4.5
             settings.GLM45_THINKING_MODEL: "0727-360B-API",  # GLM-4.5-Thinking
             settings.GLM45_SEARCH_MODEL: "0727-360B-API",  # GLM-4.5-Search
             settings.GLM45_AIR_MODEL: "0727-106B-API",  # GLM-4.5-Air
-            settings.GLM45V_MODEL: "glm-4.5v",  # GLM-4.5V多模态
+            settings.GLM45V_MODEL: "glm-4.5v",  # GLM-4.5V multimodal
             settings.GLM46_MODEL: "GLM-4-6-API-V1",  # GLM-4.6
             settings.GLM46_THINKING_MODEL: "GLM-4-6-API-V1",  # GLM-4.6-Thinking
             settings.GLM46_SEARCH_MODEL: "GLM-4-6-API-V1",  # GLM-4.6-Search
@@ -151,7 +151,7 @@ class ZAIProvider(BaseProvider):
         }
     
     def get_supported_models(self) -> List[str]:
-        """获取支持的模型列表"""
+        """Get supported model list"""
         return [
             settings.GLM45_MODEL,
             settings.GLM45_THINKING_MODEL,
@@ -170,22 +170,22 @@ class ZAIProvider(BaseProvider):
         # Support HTTP_PROXY, HTTPS_PROXY and SOCKS5_PROXY
         
         if settings.HTTPS_PROXY:
-            self.logger.info(f"🔄 使用HTTPS代理: {settings.HTTPS_PROXY}")
+            self.logger.info(f"🔄 Using HTTPS proxy: {settings.HTTPS_PROXY}")
             return settings.HTTPS_PROXY
-            
+
         if settings.HTTP_PROXY:
-            self.logger.info(f"🔄 使用HTTP代理: {settings.HTTP_PROXY}")
+            self.logger.info(f"🔄 Using HTTP proxy: {settings.HTTP_PROXY}")
             return settings.HTTP_PROXY
-            
+
         if settings.SOCKS5_PROXY:
-            self.logger.info(f"🔄 使用SOCKS5代理: {settings.SOCKS5_PROXY}")
+            self.logger.info(f"🔄 Using SOCKS5 proxy: {settings.SOCKS5_PROXY}")
             return settings.SOCKS5_PROXY
 
         return None
 
     async def get_token(self) -> str:
-        """获取认证令牌"""
-        # 如果启用匿名模式，只尝试获取访客令牌
+        """Mendapatkan token autentikasi"""
+        # Jika mode anonim diaktifkan, hanya coba mendapatkan token tamu
         if settings.ANONYMOUS_MODE:
             max_retries = 3
             retry_count = 0
@@ -193,8 +193,8 @@ class ZAIProvider(BaseProvider):
             while retry_count < max_retries:
                 try:
                     headers = get_zai_dynamic_headers()
-                    self.logger.debug(f"尝试获取访客令牌 (第{retry_count + 1}次): {self.auth_url}")
-                    self.logger.debug(f"请求头: {headers}")
+                    self.logger.debug(f"Attempting to get guest token (attempt {retry_count + 1}): {self.auth_url}")
+                    self.logger.debug(f"Request headers: {headers}")
 
                     # Get proxy configuration
                     proxies = self._get_proxy_config()
@@ -202,110 +202,110 @@ class ZAIProvider(BaseProvider):
                     async with httpx.AsyncClient(timeout=30.0, follow_redirects=True, proxy=proxies) as client:
                         response = await client.get(self.auth_url, headers=headers)
                         
-                        self.logger.debug(f"响应状态码: {response.status_code}")
-                        self.logger.debug(f"响应头: {dict(response.headers)}")
+                        self.logger.debug(f"Kode status respons: {response.status_code}")
+                        self.logger.debug(f"Header respons: {dict(response.headers)}")
                         
                         if response.status_code == 200:
                             data = response.json()
-                            self.logger.debug(f"响应数据: {data}")
+                            self.logger.debug(f"Data respons: {data}")
                             
                             token = data.get("token", "")
                             if token:
-                                # 判断令牌类型（通过检查邮箱或user_id）
+                                # Menentukan jenis token (dengan memeriksa email atau user_id)
                                 email = data.get("email", "")
                                 is_guest = "@guest.com" in email or "Guest-" in email
-                                token_type = "匿名用户" if is_guest else "认证用户"
-                                self.logger.info(f"✅ 获取令牌成功 ({token_type}): {token[:20]}...")
+                                token_type = "Pengguna anonim" if is_guest else "Pengguna terautentikasi"
+                                self.logger.info(f"✅ Pengambilan token berhasil ({token_type}): {token[:20]}...")
                                 return token
                             else:
-                                self.logger.warning(f"响应中未找到token字段: {data}")
+                                self.logger.warning(f"Field token tidak ditemukan dalam respons: {data}")
                         elif response.status_code == 405:
-                            # WAF拦截
-                            self.logger.error(f"🚫 请求被WAF拦截 (状态码405),请求头可能被识别为异常,请稍后重试...")
+                            # WAF interception
+                            self.logger.error(f"🚫 Permintaan diblokir oleh WAF (kode status 405), header permintaan mungkin diidentifikasi sebagai tidak normal, silakan coba lagi nanti...")
                             break
                         else:
-                            self.logger.warning(f"HTTP请求失败,状态码: {response.status_code}")
+                            self.logger.warning(f"Permintaan HTTP gagal, kode status: {response.status_code}")
                             try:
                                 error_data = response.json()
-                                self.logger.warning(f"错误响应: {error_data}")
+                                self.logger.warning(f"Respons error: {error_data}")
                             except:
-                                self.logger.warning(f"错误响应文本: {response.text}")
+                                self.logger.warning(f"Teks respons error: {response.text}")
                                 
                 except httpx.TimeoutException as e:
-                    self.logger.warning(f"请求超时 (第{retry_count + 1}次): {e}")
+                    self.logger.warning(f"Request timeout (attempt {retry_count + 1}): {e}")
                 except httpx.ConnectError as e:
-                    self.logger.warning(f"连接错误 (第{retry_count + 1}次): {e}")
+                    self.logger.warning(f"Connection error (attempt {retry_count + 1}): {e}")
                 except httpx.HTTPStatusError as e:
-                    self.logger.warning(f"HTTP状态错误 (第{retry_count + 1}次): {e}")
+                    self.logger.warning(f"HTTP status error (attempt {retry_count + 1}): {e}")
                 except json.JSONDecodeError as e:
-                    self.logger.warning(f"JSON解析错误 (第{retry_count + 1}次): {e}")
+                    self.logger.warning(f"JSON parsing error (attempt {retry_count + 1}): {e}")
                 except Exception as e:
-                    self.logger.warning(f"异步获取访客令牌失败 (第{retry_count + 1}次): {e}")
+                    self.logger.warning(f"Failed to get guest token asynchronously (attempt {retry_count + 1}): {e}")
                     import traceback
                     self.logger.debug(f"错误堆栈: {traceback.format_exc()}")
                 
                 retry_count += 1
                 if retry_count < max_retries:
-                    self.logger.info(f"等待2秒后重试...")
+                    self.logger.info(f"Menunggu 2 detik sebelum mencoba kembali...")
                     await asyncio.sleep(2)
 
-            # 匿名模式下，如果获取访客令牌失败，直接返回空
-            self.logger.error("❌ 匿名模式下获取访客令牌失败，已重试3次")
+            # In anonymous mode, if getting guest token fails, return empty
+            self.logger.error("❌ Gagal mendapatkan token tamu dalam mode anonim, sudah dicoba 3 kali")
             return ""
 
-        # 非匿名模式：首先使用token池获取备份令牌
+        # Mode non-anonim: pertama gunakan pool token untuk mendapatkan token cadangan
         token_pool = get_token_pool()
         if token_pool:
             token = token_pool.get_next_token()
             if token:
-                self.logger.debug(f"从token池获取令牌: {token[:20]}...")
+                self.logger.debug(f"Mendapatkan token dari pool: {token[:20]}...")
                 return token
 
-        # 如果token池为空或没有可用token，使用配置的AUTH_TOKEN
+        # If token pool is empty or no available tokens, use configured AUTH_TOKEN
         if settings.AUTH_TOKEN and settings.AUTH_TOKEN != "sk-your-api-key":
-            self.logger.debug(f"使用配置的AUTH_TOKEN")
+            self.logger.debug(f"Using configured AUTH_TOKEN")
             return settings.AUTH_TOKEN
 
-        self.logger.error("❌ 无法获取有效的认证令牌")
+        self.logger.error("❌ Tidak bisa mendapatkan token autentikasi yang valid")
         return ""
     
     def mark_token_failure(self, token: str, error: Exception = None):
-        """标记token使用失败"""
+        """Tandai penggunaan token sebagai gagal"""
         token_pool = get_token_pool()
         if token_pool:
             token_pool.mark_token_failure(token, error)
 
     async def upload_image(self, data_url: str, chat_id: str, token: str, user_id: str) -> Optional[Dict]:
-        """上传 base64 编码的图片到 Z.AI 服务器
+        """Upload base64 encoded image to Z.AI server
 
         Args:
-            data_url: data:image/xxx;base64,... 格式的图片数据
-            chat_id: 当前对话ID
-            token: 认证令牌
-            user_id: 用户ID
+            data_url: Image data in data:image/xxx;base64,... format
+            chat_id: Current conversation ID
+            token: Authentication token
+            user_id: User ID
 
         Returns:
-            上传成功返回完整的文件信息字典，失败返回None
+            Return complete file information dictionary on success, None on failure
         """
         if settings.ANONYMOUS_MODE or not data_url.startswith("data:"):
             return None
 
         try:
-            # 解析 data URL
+            # Mengurai data URL
             header, encoded = data_url.split(",", 1)
             mime_type = header.split(";")[0].split(":")[1] if ":" in header else "image/jpeg"
 
-            # 解码 base64 数据
+            # Mendekode data base64
             image_data = base64.b64decode(encoded)
             filename = str(uuid.uuid4())
 
-            self.logger.debug(f"📤 上传图片: {filename}, 大小: {len(image_data)} bytes")
+            self.logger.debug(f"📤 Mengunggah gambar: {filename}, ukuran: {len(image_data)} byte")
 
-            # 构建上传请求
+            # Membangun permintaan unggah
             upload_url = f"{self.base_url}/api/v1/files/"
             headers = {
                 "Accept": "*/*",
-                "Accept-Language": "zh-CN,zh;q=0.9",
+                "Accept-Language": "id-ID,id;q=0.9",
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
                 "Origin": f"{self.base_url}",
@@ -324,7 +324,7 @@ class ZAIProvider(BaseProvider):
             # Get proxy configuration
             proxies = self._get_proxy_config()
 
-            # 使用 httpx 上传文件
+            # Menggunakan httpx untuk mengunggah file
             async with httpx.AsyncClient(timeout=30.0, proxy=proxies) as client:
                 files = {
                     "file": (filename, image_data, mime_type)
@@ -337,9 +337,9 @@ class ZAIProvider(BaseProvider):
                     file_name = result.get("filename")
                     file_size = len(image_data)
 
-                    self.logger.info(f"✅ 图片上传成功: {file_id}_{file_name}")
+                    self.logger.info(f"✅ Gambar berhasil diunggah: {file_id}_{file_name}")
 
-                    # 返回符合 Z.AI 格式的文件信息
+                    # Mengembalikan informasi file yang sesuai dengan format Z.AI
                     current_timestamp = int(time.time())
                     return {
                         "type": "image",
@@ -368,47 +368,47 @@ class ZAIProvider(BaseProvider):
                         "media": "image"
                     }
                 else:
-                    self.logger.error(f"❌ 图片上传失败: {response.status_code} - {response.text}")
+                    self.logger.error(f"❌ Unggah gambar gagal: {response.status_code} - {response.text}")
                     return None
 
         except Exception as e:
-            self.logger.error(f"❌ 图片上传异常: {e}")
+            self.logger.error(f"❌ Error unggah gambar: {e}")
             return None
 
     async def transform_request(self, request: OpenAIRequest) -> Dict[str, Any]:
-        """转换OpenAI请求为Z.AI格式"""
-        self.logger.info(f"🔄 转换 OpenAI 请求到 Z.AI 格式: {request.model}")
+        """Mengkonversi permintaan OpenAI ke format Z.AI"""
+        self.logger.info(f"🔄 Converting OpenAI request to Z.AI format: {request.model}")
 
-        # 获取认证令牌
+        # Mendapatkan token autentikasi
         token = await self.get_token()
         user_id = _extract_user_id_from_token(token)
 
-        # 生成 chat_id（用于图片上传）
+        # Menghasilkan chat_id (digunakan untuk unggah gambar)
         chat_id = generate_uuid()
 
-        # 处理消息格式 - Z.AI 使用单独的 files 字段传递图片
+        # Memproses format pesan - Z.AI menggunakan field files terpisah untuk mengirimkan gambar
         messages = []
-        files = []  # 存储上传的图片文件信息
+        files = []  # Simpan informasi file gambar yang diunggah
 
         for msg in request.messages:
             if isinstance(msg.content, str):
-                # 纯文本消息
+                # Pesan teks murni
                 messages.append({
                     "role": msg.role,
                     "content": msg.content
                 })
             elif isinstance(msg.content, list):
-                # 多模态内容：分离文本和图片
+                # Konten multimodal: memisahkan teks dan gambar
                 text_parts = []
-                image_parts = []  # 存储图片引用
+                image_parts = []  # Simpan referensi gambar
 
                 for part in msg.content:
                     if hasattr(part, 'type'):
                         if part.type == 'text' and hasattr(part, 'text'):
-                            # 文本部分
+                            # Bagian teks
                             text_parts.append(part.text or '')
                         elif part.type == 'image_url' and hasattr(part, 'image_url'):
-                            # 图片部分 - 提取并上传
+                            # Bagian gambar - ekstrak dan unggah
                             image_url = None
                             if hasattr(part.image_url, 'url'):
                                 image_url = part.image_url.url
@@ -416,18 +416,18 @@ class ZAIProvider(BaseProvider):
                                 image_url = part.image_url['url']
 
                             if image_url:
-                                self.logger.debug(f"✅ 检测到图片: {image_url[:50]}...")
+                                self.logger.debug(f"✅ Gambar terdeteksi: {image_url[:50]}...")
 
-                                # 如果是 base64 编码的图片，上传并添加到 files 数组
+                                # Jika gambar berkode base64, unggah dan tambahkan ke array files
                                 if image_url.startswith("data:") and not settings.ANONYMOUS_MODE:
-                                    self.logger.info(f"🔄 上传 base64 图片到 Z.AI 服务器")
+                                    self.logger.info(f"🔄 Mengunggah gambar base64 ke server Z.AI")
                                     file_info = await self.upload_image(image_url, chat_id, token, user_id)
 
                                     if file_info:
                                         files.append(file_info)
-                                        self.logger.info(f"✅ 图片已添加到 files 数组")
+                                        self.logger.info(f"✅ Gambar telah ditambahkan ke array files")
 
-                                        # 在消息中保留图片引用
+                                        # Menyimpan referensi gambar dalam pesan
                                         image_ref = f"{file_info['id']}_{file_info['name']}"
                                         image_parts.append({
                                             "type": "image_url",
@@ -435,38 +435,38 @@ class ZAIProvider(BaseProvider):
                                                 "url": image_ref
                                             }
                                         })
-                                        self.logger.debug(f"📎 图片引用: {image_ref}")
+                                        self.logger.debug(f"📎 Referensi gambar: {image_ref}")
                                     else:
-                                        # 上传失败，添加错误提示
-                                        self.logger.warning(f"⚠️ 图片上传失败")
-                                        text_parts.append("[系统提示: 图片上传失败]")
+                                        # Unggah gagal, tambahkan pesan error
+                                        self.logger.warning(f"⚠️ Unggah gambar gagal")
+                                        text_parts.append("[Pesan sistem: Unggah gambar gagal]")
                                 else:
-                                    # 非 base64 图片或匿名模式，直接使用原URL
+                                    # Bukan gambar base64 atau mode anonim, gunakan URL asli langsung
                                     if not settings.ANONYMOUS_MODE:
-                                        self.logger.warning(f"⚠️ 非 base64 图片或匿名模式，保留原始URL")
+                                        self.logger.warning(f"⚠️ Bukan gambar base64 atau mode anonim, mempertahankan URL asli")
                                     image_parts.append({
                                         "type": "image_url",
                                         "image_url": {"url": image_url}
                                     })
                     elif isinstance(part, dict):
-                        # 直接是字典格式的内容
+                        # Konten dalam format kamus langsung
                         if part.get('type') == 'text':
                             text_parts.append(part.get('text', ''))
                         elif part.get('type') == 'image_url':
                             image_url = part.get('image_url', {}).get('url', '')
                             if image_url:
-                                self.logger.debug(f"✅ 检测到图片: {image_url[:50]}...")
+                                self.logger.debug(f"✅ Gambar terdeteksi: {image_url[:50]}...")
 
-                                # 如果是 base64 编码的图片，上传并添加到 files 数组
+                                # Jika gambar berkode base64, unggah dan tambahkan ke array files
                                 if image_url.startswith("data:") and not settings.ANONYMOUS_MODE:
-                                    self.logger.info(f"🔄 上传 base64 图片到 Z.AI 服务器")
+                                    self.logger.info(f"🔄 Mengunggah gambar base64 ke server Z.AI")
                                     file_info = await self.upload_image(image_url, chat_id, token, user_id)
 
                                     if file_info:
                                         files.append(file_info)
-                                        self.logger.info(f"✅ 图片已添加到 files 数组")
+                                        self.logger.info(f"✅ Gambar telah ditambahkan ke array files")
 
-                                        # 在消息中保留图片引用
+                                        # Menyimpan referensi gambar dalam pesan
                                         image_ref = f"{file_info['id']}_{file_info['name']}"
                                         image_parts.append({
                                             "type": "image_url",
@@ -474,27 +474,27 @@ class ZAIProvider(BaseProvider):
                                                 "url": image_ref
                                             }
                                         })
-                                        self.logger.debug(f"📎 图片引用: {image_ref}")
+                                        self.logger.debug(f"📎 Referensi gambar: {image_ref}")
                                     else:
-                                        # 上传失败，添加错误提示
-                                        self.logger.warning(f"⚠️ 图片上传失败")
-                                        text_parts.append("[系统提示: 图片上传失败]")
+                                        # Unggah gagal, tambahkan pesan error
+                                        self.logger.warning(f"⚠️ Unggah gambar gagal")
+                                        text_parts.append("[Pesan sistem: Unggah gambar gagal]")
                                 else:
-                                    # 非 base64 图片或匿名模式
+                                    # Bukan gambar base64 atau mode anonim
                                     if not settings.ANONYMOUS_MODE:
-                                        self.logger.warning(f"⚠️ 非 base64 图片或匿名模式，保留原始URL")
+                                        self.logger.warning(f"⚠️ Bukan gambar base64 atau mode anonim, mempertahankan URL asli")
                                     image_parts.append({
                                         "type": "image_url",
                                         "image_url": {"url": image_url}
                                     })
                     elif isinstance(part, str):
-                        # 纯字符串部分
+                        # Bagian string murni
                         text_parts.append(part)
 
-                # 构建多模态消息内容
+                # Membangun konten pesan multimodal
                 message_content = []
 
-                # 添加文本部分
+                # Menambahkan bagian teks
                 combined_text = " ".join(text_parts).strip()
                 if combined_text:
                     message_content.append({
@@ -502,28 +502,28 @@ class ZAIProvider(BaseProvider):
                         "text": combined_text
                     })
 
-                # 添加图片部分（保持图片引用在消息中）
+                # Menambahkan bagian gambar (mempertahankan referensi gambar dalam pesan)
                 message_content.extend(image_parts)
 
-                # 只有在有内容时才添加消息
+                # Hanya menambahkan pesan jika ada konten
                 if message_content:
                     messages.append({
                         "role": msg.role,
-                        "content": message_content  # ✅ 多模态内容数组
+                        "content": message_content  # ✅ Array konten multimodal
                     })
         
-        # 确定请求的模型特性
-        # Extract last user message text for signing (提取最后一条用户消息的文本用于签名)
+        # Determine requested model characteristics
+        # Mengekstrak teks pesan pengguna terakhir untuk penandatanganan
         last_user_text = ""
         for m in reversed(messages):
             if m.get("role") == "user":
                 content = m.get("content")
                 if isinstance(content, str):
-                    # 纯文本消息
+                    # Pesan teks murni
                     last_user_text = content
                     break
                 elif isinstance(content, list):
-                    # 多模态消息：只提取文本部分用于签名
+                    # Pesan multimodal: hanya ekstrak bagian teks untuk penandatanganan
                     texts = [p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text"]
                     last_user_text = " ".join([t for t in texts if t]).strip()
                     break
@@ -533,11 +533,11 @@ class ZAIProvider(BaseProvider):
         is_advanced_search = requested_model == settings.GLM46_ADVANCED_SEARCH_MODEL
         is_air = "-air" in requested_model.casefold()
 
-        # 获取上游模型ID
+        # Mendapatkan ID model upstream
         upstream_model_id = self.model_mapping.get(requested_model, "0727-360B-API")
 
-        # ⚠️ 重要：在构建 body 之前处理工具调用！
-        # 处理工具支持 - 使用提示词注入方式
+        # ⚠️ Penting: proses pemanggilan tool sebelum membangun body!
+        # Memproses dukungan tool - menggunakan metode injeksi prompt
         if settings.TOOL_SUPPORT and not is_thinking and request.tools:
             tool_choice = getattr(request, 'tool_choice', 'auto') or 'auto'
             messages = process_messages_with_tools(
@@ -545,21 +545,21 @@ class ZAIProvider(BaseProvider):
                 tools=request.tools,
                 tool_choice=tool_choice
             )
-            self.logger.info(f"🔧 工具调用已通过提示词注入: {len(request.tools)} 个工具")
+            self.logger.info(f"🔧 Pemanggilan tool diinjeksi melalui injeksi prompt: {len(request.tools)} tool")
 
-        # 构建MCP服务器列表
+        # Membangun daftar server MCP
         mcp_servers = []
         if is_advanced_search:
             mcp_servers.append("advanced-search")
-            self.logger.info("🔍 检测到高级搜索模型，添加 advanced-search MCP 服务器")
+            self.logger.info("🔍 Model pencarian lanjutan terdeteksi, menambahkan server MCP advanced-search")
 
-        # 构建上游请求体
+        # Membangun body permintaan upstream
         body = {
-            "stream": True,  # 总是使用流式
+            "stream": True,  # Selalu menggunakan streaming
             "model": upstream_model_id,
-            "messages": messages,  # ✅ messages 已经包含工具提示词
-            "signature_prompt": last_user_text,  # 用于签名的最后一条用户消息
-            "files": files,  # 图片文件数组
+            "messages": messages,  # ✅ messages sudah mengandung prompt tool
+            "signature_prompt": last_user_text,  # Pesan pengguna terakhir untuk penandatanganan
+            "files": files,  # Array file gambar
             "params": {},
             "features": {
                 "image_generation": False,
@@ -625,16 +625,16 @@ class ZAIProvider(BaseProvider):
             "id": generate_uuid(),
         }
 
-        # 不传递 tools 给上游,使用提示工程方式
+        # Tidak mengirimkan tools ke upstream, menggunakan metode prompt engineering
         body["tools"] = None
         
-        # 处理其他参数
+        # Memproses parameter lain
         if request.temperature is not None:
             body["params"]["temperature"] = request.temperature
         if request.max_tokens is not None:
             body["params"]["max_tokens"] = request.max_tokens
         
-        # Dual-layer HMAC signing metadata and header
+        # Penandatanganan HMAC lapisan ganda untuk metadata dan header
         user_id = _extract_user_id_from_token(token)
         timestamp_ms = int(time.time() * 1000)
         request_id = generate_uuid()
@@ -648,12 +648,12 @@ class ZAIProvider(BaseProvider):
                 s=timestamp_ms,
             )
             signature = signature_result["signature"]
-            logger.debug(f"[Z.AI] 生成签名成功: {signature[:16]}... (user_id={user_id}, request_id={request_id})")
+            logger.debug(f"[Z.AI] Pembuatan tanda tangan berhasil: {signature[:16]}... (user_id={user_id}, request_id={request_id})")
         except Exception as e:
-            logger.error(f"[Z.AI] 签名生成失败: {e}")
+            logger.error(f"[Z.AI] Pembuatan tanda tangan gagal: {e}")
             signature = ""
 
-        # 构建请求头
+        # Membangun header permintaan
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
@@ -674,11 +674,11 @@ class ZAIProvider(BaseProvider):
         }
         signed_url = f"{self.config.api_endpoint}?{urlencode(query_params)}"
 
-        # 记录请求详情用于调试
-        logger.debug(f"[Z.AI] 请求头: Authorization=Bearer *****, X-Signature={signature[:16] if signature else '(空)'}...")
-        logger.debug(f"[Z.AI] URL 参数: timestamp={timestamp_ms}, requestId={request_id}, user_id={user_id}")
+        # Mencatat detail permintaan untuk debugging
+        logger.debug(f"[Z.AI] Header permintaan: Authorization=Bearer *****, X-Signature={signature[:16] if signature else '(kosong)'}...")
+        logger.debug(f"[Z.AI] Parameter URL: timestamp={timestamp_ms}, requestId={request_id}, user_id={user_id}")
         
-        # 存储当前token用于错误处理
+        # Menyimpan token saat ini untuk penanganan error
         self._current_token = token
 
         return {
@@ -695,22 +695,22 @@ class ZAIProvider(BaseProvider):
         request: OpenAIRequest,
         **kwargs
     ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
-        """聊天完成接口"""
+        """Antarmuka penyelesaian obrolan"""
         self.log_request(request)
 
         try:
-            # 转换请求
+            # Mengkonversi permintaan
             transformed = await self.transform_request(request)
 
-            # 根据请求类型返回响应
+            # Mengembalikan respons berdasarkan jenis permintaan
             if request.stream:
-                # 流式响应
+                # Respons streaming
                 return self._create_stream_response(request, transformed)
             else:
                 # Get proxy configuration
                 proxies = self._get_proxy_config()
 
-                # 非流式响应
+                # Respons non-streaming
                 async with httpx.AsyncClient(timeout=30.0, proxy=proxies) as client:
                     response = await client.post(
                         transformed["url"],
@@ -719,7 +719,7 @@ class ZAIProvider(BaseProvider):
                     )
 
                     if not response.is_success:
-                        error_msg = f"Z.AI API 错误: {response.status_code}"
+                        error_msg = f"Z.AI API Error: {response.status_code}"
                         self.log_response(False, error_msg)
                         return self.handle_error(Exception(error_msg))
 
@@ -727,7 +727,7 @@ class ZAIProvider(BaseProvider):
 
         except Exception as e:
             self.log_response(False, str(e))
-            return self.handle_error(e, "请求处理")
+            return self.handle_error(e, "Pemrosesan permintaan")
 
     
     async def _create_stream_response(
@@ -746,7 +746,7 @@ class ZAIProvider(BaseProvider):
                 http2=True,
                 proxy=proxies,
             ) as client:
-                self.logger.info(f"🎯 发送请求到 Z.AI: {transformed['url']}")
+                self.logger.info(f"🎯 Sending request to Z.AI: {transformed['url']}")
                 # self.logger.info(f"📦 请求体 model: {transformed['body']['model']}")
                 # self.logger.info(f"📦 请求体 messages: {json.dumps(transformed['body']['messages'], ensure_ascii=False)}")
                 async with client.stream(
@@ -756,18 +756,18 @@ class ZAIProvider(BaseProvider):
                     headers=transformed["headers"],
                 ) as response:
                     if response.status_code != 200:
-                        self.logger.error(f"❌ 上游返回错误: {response.status_code}")
+                        self.logger.error(f"❌ Upstream returned error: {response.status_code}")
                         error_text = await response.aread()
                         error_msg = error_text.decode('utf-8', errors='ignore')
                         if error_msg:
-                            self.logger.error(f"❌ 错误详情: {error_msg}")
+                            self.logger.error(f"❌ Error details: {error_msg}")
 
-                        # 特殊处理 405 状态码(WAF拦截)
+                        # Special handling for status code 405 (WAF blocking)
                         if response.status_code == 405:
-                            self.logger.error(f"🚫 请求被上游WAF拦截,可能是请求头或签名异常,请稍后重试...")
+                            self.logger.error(f"🚫 Request blocked by upstream WAF, possibly due to request headers or signature anomalies, please try again later...")
                             error_response = {
                                 "error": {
-                                    "message": "请求被上游WAF拦截(405 Method Not Allowed),可能是请求头或签名异常,请稍后重试...",
+                                    "message": "Request blocked by upstream WAF (405 Method Not Allowed), possibly due to request headers or signature anomalies, please try again later...",
                                     "type": "waf_blocked",
                                     "code": 405
                                 }
@@ -795,7 +795,7 @@ class ZAIProvider(BaseProvider):
                         yield chunk
                     return
         except Exception as e:
-            self.logger.error(f"❌ 流处理错误: {e}")
+            self.logger.error(f"❌ Stream processing error: {e}")
             import traceback
             self.logger.error(traceback.format_exc())
             if current_token and not settings.ANONYMOUS_MODE:
@@ -816,7 +816,7 @@ class ZAIProvider(BaseProvider):
         request: OpenAIRequest,
         transformed: Dict[str, Any]
     ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
-        """转换Z.AI响应为OpenAI格式"""
+        """Mengkonversi respons Z.AI ke format OpenAI"""
         chat_id = transformed["chat_id"]
         model = transformed["model"]
         
@@ -833,24 +833,24 @@ class ZAIProvider(BaseProvider):
         request: OpenAIRequest,
         transformed: Dict[str, Any]
     ) -> AsyncGenerator[str, None]:
-        """处理Z.AI流式响应"""
-        self.logger.info(f"✅ Z.AI 响应成功，开始处理 SSE 流")
+        """Memproses respons streaming Z.AI"""
+        self.logger.info(f"✅ Respons Z.AI berhasil, mulai memproses stream SSE")
 
-        # 检查是否启用了工具调用 (通过检查原始请求)
+        # Memeriksa apakah pemanggilan tool diaktifkan (dengan memeriksa permintaan asli)
         has_tools = settings.TOOL_SUPPORT and request.tools is not None and len(request.tools) > 0
 
-        # 累积内容缓冲区,用于提取工具调用
+        # Buffer konten akumulatif, untuk ekstraksi pemanggilan tool
         buffered_content = ""
         has_sent_role = False
 
-        # 处理状态
+        # Status pemrosesan
         has_thinking = False
         thinking_signature = None
 
-        # 处理SSE流
+        # Memproses stream SSE
         buffer = ""
         line_count = 0
-        self.logger.debug("📡 开始接收 SSE 流数据...")
+        self.logger.debug("📡 Mulai menerima data stream SSE...")
 
         try:
             async for line in response.aiter_lines():
@@ -858,10 +858,10 @@ class ZAIProvider(BaseProvider):
                 if not line:
                     continue
 
-                # 累积到buffer处理完整的数据行
+                # Akumulasi ke buffer untuk memproses baris data lengkap
                 buffer += line + "\n"
 
-                # 检查是否有完整的data行
+                # Memeriksa apakah ada baris data lengkap
                 while "\n" in buffer:
                     current_line, buffer = buffer.split("\n", 1)
                     if not current_line.strip():
@@ -874,7 +874,7 @@ class ZAIProvider(BaseProvider):
                                 yield "data: [DONE]\n\n"
                             continue
 
-                        self.logger.debug(f"📦 解析数据块: {chunk_str[:1000]}..." if len(chunk_str) > 1000 else f"📦 解析数据块: {chunk_str}")
+                        self.logger.debug(f"📦 Mengurai chunk data: {chunk_str[:1000]}..." if len(chunk_str) > 1000 else f"📦 Mengurai chunk data: {chunk_str}")
 
                         try:
                             chunk = json.loads(chunk_str)
@@ -883,16 +883,16 @@ class ZAIProvider(BaseProvider):
                                 data = chunk.get("data", {})
                                 phase = data.get("phase")
 
-                                # 记录每个阶段（只在阶段变化时记录）
+                                # Mencatat setiap fase (hanya saat fase berubah)
                                 if phase and phase != getattr(self, '_last_phase', None):
-                                    self.logger.info(f"📈 SSE 阶段: {phase}")
+                                    self.logger.info(f"📈 SSE Phase: {phase}")
                                     self._last_phase = phase
 
-                                # 处理思考内容
+                                # Memproses konten berpikir
                                 if phase == "thinking":
                                     if not has_thinking:
                                         has_thinking = True
-                                        # 发送初始角色
+                                        # Mengirim peran awal
                                         role_chunk = self.create_openai_chunk(
                                             chat_id,
                                             model,
@@ -902,7 +902,7 @@ class ZAIProvider(BaseProvider):
 
                                     delta_content = data.get("delta_content", "")
                                     if delta_content:
-                                        # 处理思考内容格式
+                                        # Memproses format konten berpikir
                                         if delta_content.startswith("<details"):
                                             content = (
                                                 delta_content.split("</summary>\n>")[-1].strip()
@@ -922,31 +922,31 @@ class ZAIProvider(BaseProvider):
                                         )
                                         yield await self.format_sse_chunk(thinking_chunk)
 
-                                # 处理答案内容
+                                # Memproses konten jawaban
                                 elif phase == "answer":
                                     delta_content = data.get("delta_content", "")
                                     edit_content = data.get("edit_content", "")
 
-                                    # 累积内容(用于工具调用提取)
+                                    # Mengakumulasi konten (untuk ekstraksi pemanggilan tool)
                                     if delta_content:
                                         buffered_content += delta_content
                                     elif edit_content:
                                         buffered_content = edit_content
 
-                                    # 如果包含 usage,说明流式结束
+                                    # Jika mengandung usage, berarti streaming berakhir
                                     if data.get("usage"):
                                         usage = data["usage"]
-                                        self.logger.info(f"📦 完成响应 - 使用统计: {json.dumps(usage)}")
+                                        self.logger.info(f"📦 Respons selesai - Statistik penggunaan: {json.dumps(usage)}")
 
-                                        # 尝试从缓冲区提取 tool_calls
+                                        # Mencoba mengekstrak tool_calls dari buffer
                                         tool_calls = None
 
                                         if has_tools:
                                             tool_calls, _ = parse_and_extract_tool_calls(buffered_content)
 
                                         if tool_calls:
-                                            # 发现工具调用
-                                            self.logger.info(f"🔧 从响应中提取到 {len(tool_calls)} 个工具调用")
+                                            # Pemanggilan tool ditemukan
+                                            self.logger.info(f"🔧 Extracted {len(tool_calls)} tool calls from response")
 
                                             if not has_sent_role:
                                                 role_chunk = self.create_openai_chunk(
@@ -957,7 +957,7 @@ class ZAIProvider(BaseProvider):
                                                 yield await self.format_sse_chunk(role_chunk)
                                                 has_sent_role = True
 
-                                            # 发送工具调用
+                                            # Mengirim pemanggilan tool
                                             for idx, tc in enumerate(tool_calls):
                                                 tool_chunk = self.create_openai_chunk(
                                                     chat_id,
@@ -977,7 +977,7 @@ class ZAIProvider(BaseProvider):
                                                 )
                                                 yield await self.format_sse_chunk(tool_chunk)
 
-                                            # 发送完成块
+                                            # Mengirim chunk penyelesaian
                                             finish_chunk = self.create_openai_chunk(
                                                 chat_id,
                                                 model,
@@ -989,8 +989,8 @@ class ZAIProvider(BaseProvider):
                                             yield "data: [DONE]\n\n"
 
                                         else:
-                                            # 没有工具调用,流式内容已经在上面的增量输出中发送过了
-                                            # 这里只需要发送 finish 块即可,不要再次发送内容
+                                            # Tidak ada pemanggilan tool, konten streaming sudah dikirim di output inkremental di atas
+                                            # Di sini hanya perlu mengirim chunk finish, jangan kirim konten lagi
                                             if not has_sent_role and not has_thinking:
                                                 role_chunk = self.create_openai_chunk(
                                                     chat_id,
@@ -1010,11 +1010,11 @@ class ZAIProvider(BaseProvider):
                                             yield await self.format_sse_chunk(finish_chunk)
                                             yield "data: [DONE]\n\n"
                                     else:
-                                        # 流式过程中,输出答案内容（即使有工具调用也要显示）
-                                        # 处理思考结束和答案开始
+                                        # Selama proses streaming, keluarkan konten jawaban (bahkan jika ada pemanggilan tool harus ditampilkan)
+                                        # Memproses akhir berpikir dan awal jawaban
                                         if edit_content and "</details>\n" in edit_content:
                                             if has_thinking:
-                                                # 发送思考签名
+                                                # Mengirim tanda tangan berpikir
                                                 thinking_signature = str(int(time.time() * 1000))
                                                 sig_chunk = self.create_openai_chunk(
                                                     chat_id,
@@ -1029,7 +1029,7 @@ class ZAIProvider(BaseProvider):
                                                 )
                                                 yield await self.format_sse_chunk(sig_chunk)
 
-                                            # 提取答案内容
+                                            # Mengekstrak konten jawaban
                                             content_after = edit_content.split("</details>\n")[-1]
                                             if content_after:
                                                 content_chunk = self.create_openai_chunk(
@@ -1042,7 +1042,7 @@ class ZAIProvider(BaseProvider):
                                                 )
                                                 yield await self.format_sse_chunk(content_chunk)
 
-                                        # 处理增量内容
+                                        # Memproses konten inkremental
                                         elif delta_content:
                                             if not has_sent_role and not has_thinking:
                                                 role_chunk = self.create_openai_chunk(
@@ -1062,21 +1062,21 @@ class ZAIProvider(BaseProvider):
                                                 }
                                             )
                                             output_data = await self.format_sse_chunk(content_chunk)
-                                            self.logger.debug(f"➡️ 输出内容块到客户端: {output_data}")
+                                            self.logger.debug(f"➡️ Mengeluarkan chunk konten ke klien: {output_data}")
                                             yield output_data
 
                         except json.JSONDecodeError as e:
-                            self.logger.debug(f"❌ JSON解析错误: {e}, 内容: {chunk_str[:1000]}")
+                            self.logger.debug(f"❌ Error parsing JSON: {e}, konten: {chunk_str[:1000]}")
                         except Exception as e:
-                            self.logger.error(f"❌ 处理chunk错误: {e}")
+                            self.logger.error(f"❌ Error memproses chunk: {e}")
 
-            self.logger.info(f"✅ SSE 流处理完成，共处理 {line_count} 行数据")
+            self.logger.info(f"✅ Pemrosesan stream SSE selesai, diproses {line_count} baris data")
 
         except Exception as e:
-            self.logger.error(f"❌ 流式响应处理错误: {e}")
+            self.logger.error(f"❌ Error memproses respons streaming: {e}")
             import traceback
             self.logger.error(traceback.format_exc())
-            # 发送错误结束块
+            # Mengirim chunk akhir error
             yield await self.format_sse_chunk(
                 self.create_openai_chunk(chat_id, model, {}, "stop")
             )
@@ -1088,11 +1088,11 @@ class ZAIProvider(BaseProvider):
         chat_id: str, 
         model: str
     ) -> Dict[str, Any]:
-        """处理非流式响应
+        """Memproses respons non-streaming
 
-        说明：上游始终以 SSE 形式返回（transform_request 固定 stream=True），
-        因此这里需要聚合 aiter_lines() 的 data: 块，提取 usage、思考内容与答案内容，
-        并最终产出一次性 OpenAI 格式响应。
+        Penjelasan: upstream selalu mengembalikan dalam bentuk SSE (transform_request tetap stream=True),
+        oleh karena itu di sini perlu menggabungkan chunk data: dari aiter_lines(), mengekstrak usage, konten berpikir, dan konten jawaban,
+        dan akhirnya menghasilkan respons format OpenAI sekali pakai.
         """
         final_content = ""
         reasoning_content = ""
@@ -1109,21 +1109,21 @@ class ZAIProvider(BaseProvider):
 
                 line = line.strip()
 
-                # 仅处理以 data: 开头的 SSE 行，其余行尝试作为错误/JSON 忽略
+                # Hanya memproses baris SSE yang dimulai dengan data:, baris lainnya coba diabaikan sebagai error/JSON
                 if not line.startswith("data:"):
-                    # 尝试解析为错误 JSON
+                    # Mencoba mengurai sebagai error JSON
                     try:
                         maybe_err = json.loads(line)
                         if isinstance(maybe_err, dict) and (
                             "error" in maybe_err or "code" in maybe_err or "message" in maybe_err
                         ):
-                            # 统一错误处理
+                            # Penanganan error terpadu
                             msg = (
                                 (maybe_err.get("error") or {}).get("message")
                                 if isinstance(maybe_err.get("error"), dict)
                                 else maybe_err.get("message")
-                            ) or "上游返回错误"
-                            return self.handle_error(Exception(msg), "API响应")
+                            ) or "Error dari upstream"
+                            return self.handle_error(Exception(msg), "Respons API")
                     except Exception:
                         pass
                     continue
@@ -1132,7 +1132,7 @@ class ZAIProvider(BaseProvider):
                 if not data_str or data_str in ("[DONE]", "DONE", "done"):
                     continue
 
-                # 解析 SSE 数据块
+                # Mengurai chunk data SSE
                 try:
                     chunk = json.loads(data_str)
                 except json.JSONDecodeError:
@@ -1146,14 +1146,14 @@ class ZAIProvider(BaseProvider):
                 delta_content = data.get("delta_content", "")
                 edit_content = data.get("edit_content", "")
 
-                # 记录用量（通常在最后块中出现，但这里每次覆盖保持最新）
+                # Mencatat penggunaan (biasanya muncul di chunk terakhir, tapi di sini ditimpa setiap kali untuk menjaga yang terbaru)
                 if data.get("usage"):
                     try:
                         usage_info = data["usage"]
                     except Exception:
                         pass
 
-                # 思考阶段聚合（去除 <details><summary>... 包裹头）
+                # Agregasi fase berpikir (menghapus pembungkus <details><summary>...)
                 if phase == "thinking":
                     if delta_content:
                         if delta_content.startswith("<details"):
@@ -1166,9 +1166,9 @@ class ZAIProvider(BaseProvider):
                             cleaned = delta_content
                         reasoning_content += cleaned
 
-                # 答案阶段聚合
+                # Agregasi fase jawaban
                 elif phase == "answer":
-                    # 当 edit_content 同时包含思考结束标记与答案时，提取答案部分
+                    # Saat edit_content mengandung marker akhir berpikir dan jawaban bersamaan, ekstrak bagian jawaban
                     if edit_content and "</details>\n" in edit_content:
                         content_after = edit_content.split("</details>\n")[-1]
                         if content_after:
@@ -1177,21 +1177,21 @@ class ZAIProvider(BaseProvider):
                         final_content += delta_content
 
         except Exception as e:
-            self.logger.error(f"❌ 非流式响应处理错误: {e}")
+            self.logger.error(f"❌ Error memproses respons non-streaming: {e}")
             import traceback
             self.logger.error(traceback.format_exc())
-            # 返回统一错误响应
-            return self.handle_error(e, "非流式聚合")
+            # Mengembalikan respons error terpadu
+            return self.handle_error(e, "Agregasi non-streaming")
 
-        # 清理并返回
+        # Membersihkan dan mengembalikan
         final_content = (final_content or "").strip()
         reasoning_content = (reasoning_content or "").strip()
 
-        # 若没有聚合到答案，但有思考内容，则保底返回思考内容
+        # Jika tidak ada jawaban yang teragregasi, tapi ada konten berpikir, maka kembalikan konten berpikir sebagai fallback
         if not final_content and reasoning_content:
             final_content = reasoning_content
 
-        # 返回包含推理内容的标准响应（若无推理则不会携带）
+        # Mengembalikan respons standar yang mengandung konten penalaran (jika tidak ada penalaran maka tidak akan dibawa)
         return self.create_openai_response_with_reasoning(
             chat_id,
             model,

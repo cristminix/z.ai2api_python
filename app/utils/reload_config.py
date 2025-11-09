@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-热重载配置模块
-定义 Granian 服务器热重载时需要忽略的目录和文件模式
+Modul konfigurasi pemuatan ulang panas
+Tentukan direktori dan pola file yang harus diabaikan saat pemuatan ulang panas server Granian
 """
 
 # 忽略的目录列表

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-工具调用处理模块
+Modul penanganan panggilan alat
 """
 
 import json
@@ -14,14 +14,14 @@ logger = get_logger()
 
 def generate_tool_prompt(tools: Optional[List[Dict[str, Any]]]) -> str:
     """
-    生成工具调用提示词
-    将 OpenAI tools 定义转换为 Markdown 格式的说明文档
+    Hasilkan petunjuk panggilan alat
+    Konversi definisi alat OpenAI ke dokumen instruksi format Markdown
 
     Args:
         tools: OpenAI 格式的工具定义列表
 
     Returns:
-        str: Markdown 格式的工具使用说明
+        str: Instruksi penggunaan alat dalam format Markdown
     """
     if not tools or len(tools) == 0:
         return ""
@@ -85,7 +85,7 @@ def process_messages_with_tools(
     tool_choice: str = "auto"
 ) -> List[Dict[str, Any]]:
     """
-    将工具定义注入到消息列表中
+    Suntikkan definisi alat ke daftar pesan
 
     Args:
         messages: 原始消息列表
@@ -131,13 +131,13 @@ def process_messages_with_tools(
         })
         processed.extend(messages)
 
-    logger.debug(f"工具提示已注入到消息列表,共 {len(processed)} 条消息")
+    logger.debug(f"Petunjuk alat telah disuntikkan ke daftar pesan, total {len(processed)} pesan")
     return processed
 
 
 def parse_and_extract_tool_calls(content: str) -> Tuple[Optional[List[Dict[str, Any]]], str]:
     """
-    从响应内容中提取 tool_calls JSON
+    Ekstrak JSON tool_calls dari konten respons
     
     Args:
         content: 模型返回的文本内容
@@ -172,7 +172,7 @@ def parse_and_extract_tool_calls(content: str) -> Tuple[Optional[List[Dict[str, 
                                     func["arguments"] = json.dumps(func["arguments"], ensure_ascii=False)
                                 elif not isinstance(func["arguments"], str):
                                     func["arguments"] = str(func["arguments"])
-                    logger.debug(f"从 JSON 代码块中提取到 {len(tool_calls)} 个工具调用")
+                    logger.debug(f"Ekstrak {len(tool_calls)} panggilan alat dari blok JSON")
                     break
         except json.JSONDecodeError:
             continue
@@ -221,7 +221,7 @@ def parse_and_extract_tool_calls(content: str) -> Tuple[Optional[List[Dict[str, 
                                                 func["arguments"] = json.dumps(func["arguments"], ensure_ascii=False)
                                             elif not isinstance(func["arguments"], str):
                                                 func["arguments"] = str(func["arguments"])
-                                logger.debug(f"从内联 JSON 中提取到 {len(tool_calls)} 个工具调用")
+                                logger.debug(f"Ekstrak {len(tool_calls)} panggilan alat dari JSON sebaris")
                                 break
                     except json.JSONDecodeError:
                         pass
@@ -239,7 +239,7 @@ def parse_and_extract_tool_calls(content: str) -> Tuple[Optional[List[Dict[str, 
 
 def remove_tool_json_content(content: str) -> str:
     """
-    从响应内容中移除工具调用 JSON
+    Hapus panggilan alat JSON dari konten respons
 
     Args:
         content: 原始响应内容
@@ -317,13 +317,13 @@ def remove_tool_json_content(content: str) -> str:
     # 移除多余的空白行
     cleaned_result = re.sub(r'\n{3,}', '\n\n', cleaned_result)
 
-    logger.debug(f"内容清理完成,原始长度: {len(content)}, 清理后长度: {len(cleaned_result)}")
+    logger.debug(f"Pembersihan konten selesai, panjang asli: {len(content)}, panjang setelah dibersihkan: {len(cleaned_result)}")
     return cleaned_result
 
 
 def content_to_string(content: Any) -> str:
     """
-    将消息内容转换为字符串
+    Konversi konten pesan ke string
 
     Args:
         content: 消息内容,可能是字符串或列表(多模态)

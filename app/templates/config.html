@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}配置管理{% endblock %}
+{% block title %}Manajemen konfigurasi{% endblock %}
 
 {% block content %}
 <div class="space-y-6" x-data="{
@@ -10,176 +10,164 @@
 }">
     <!-- 页面标题 -->
     <div class="flex items-center justify-between">
-        <h2 class="text-3xl font-bold text-gray-900">配置管理</h2>
-        <button
-            @click="showAdvanced = !showAdvanced"
+        <h2 class="text-3xl font-bold text-gray-900">Manajemen konfigurasi</h2>
+        <button @click="showAdvanced = !showAdvanced"
             class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-sm font-medium">
-            <span x-text="showAdvanced ? '隐藏高级选项' : '显示高级选项'"></span>
+            <span x-text="showAdvanced ? 'Sembunyikan opsi lanjutan' : 'Tampilkan opsi lanjutan'"></span>
         </button>
     </div>
 
-    <!-- 基础配置 -->
+    <!-- Konfigurasi dasar -->
     <div class="bg-white shadow rounded-lg">
         <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">基础配置</h3>
+            <h3 class="text-lg font-medium text-gray-900">Konfigurasi dasar</h3>
         </div>
-        <form hx-post="/admin/api/config/save"
-              hx-target="#save-notification"
-              hx-swap="innerHTML"
-              class="p-6 space-y-6">
+        <form hx-post="/admin/api/config/save" hx-target="#save-notification" hx-swap="innerHTML" class="p-6 space-y-6">
 
-            <!-- 服务名称 -->
+            <!-- Nama layanan -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">服务名称</label>
-                <input type="text"
-                       name="service_name"
-                       value="{{ config.SERVICE_NAME or 'Z.AI2API' }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                <p class="mt-1 text-sm text-gray-500">显示在进程列表中的服务名称</p>
+                <label class="block text-sm font-medium text-gray-700">Nama layanan</label>
+                <input type="text" name="service_name" value="{{ config.SERVICE_NAME or 'Z.AI2API' }}"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                <p class="mt-1 text-sm text-gray-500">Nama layanan yang ditampilkan dalam daftar proses</p>
             </div>
 
-            <!-- 监听端口 -->
+            <!-- Port pendengaran -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">监听端口</label>
-                <input type="number"
-                       name="listen_port"
-                       value="{{ config.LISTEN_PORT or 8000 }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                <p class="mt-1 text-sm text-gray-500">服务监听的端口号</p>
+                <label class="block text-sm font-medium text-gray-700">Port pendengaran</label>
+                <input type="number" name="listen_port" value="{{ config.LISTEN_PORT or 8000 }}"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                <p class="mt-1 text-sm text-gray-500">Nomor port yang didengarkan oleh layanan</p>
             </div>
 
-            <!-- 调试模式 -->
+            <!-- Mode debug -->
             <div class="flex items-center">
-                <input type="checkbox"
-                       name="debug_logging"
-                       {{ 'checked' if config.DEBUG_LOGGING else '' }}
-                       class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                <label class="ml-2 block text-sm text-gray-900">启用调试日志</label>
+                <input type="checkbox" name="debug_logging" {{ 'checked' if config.DEBUG_LOGGING else '' }}
+                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                <label class="ml-2 block text-sm text-gray-900">Aktifkan log debug</label>
             </div>
 
-            <!-- 匿名模式 -->
+            <!-- Mode anonim -->
             <div class="flex items-center">
-                <input type="checkbox"
-                       name="anonymous_mode"
-                       {{ 'checked' if config.ANONYMOUS_MODE else '' }}
-                       class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                <label class="ml-2 block text-sm text-gray-900">启用匿名模式（自动获取临时 Token）</label>
+                <input type="checkbox" name="anonymous_mode" {{ 'checked' if config.ANONYMOUS_MODE else '' }}
+                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                <label class="ml-2 block text-sm text-gray-900">Aktifkan mode anonim (dapatkan Token sementara secara
+                    otomatis)</label>
             </div>
 
-            <!-- 认证配置 -->
+            <!-- Konfigurasi autentikasi -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">客户端认证密钥</label>
-                <input type="text"
-                       name="auth_token"
-                       value="{{ config.AUTH_TOKEN or 'sk-your-api-key' }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                <p class="mt-1 text-sm text-gray-500">客户端访问本服务时使用的 API 密钥</p>
+                <label class="block text-sm font-medium text-gray-700">Kunci autentikasi klien</label>
+                <input type="text" name="auth_token" value="{{ config.AUTH_TOKEN or 'sk-your-api-key' }}"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                <p class="mt-1 text-sm text-gray-500">Kunci API yang digunakan klien saat mengakses layanan ini</p>
             </div>
 
-            <!-- 跳过认证 -->
+            <!-- Lewati autentikasi -->
             <div class="flex items-center">
-                <input type="checkbox"
-                       name="skip_auth_token"
-                       {{ 'checked' if config.SKIP_AUTH_TOKEN else '' }}
-                       class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                <label class="ml-2 block text-sm text-gray-900">跳过客户端认证（仅开发环境）</label>
+                <input type="checkbox" name="skip_auth_token" {{ 'checked' if config.SKIP_AUTH_TOKEN else '' }}
+                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                <label class="ml-2 block text-sm text-gray-900">Lewati autentikasi klien (hanya untuk lingkungan
+                    pengembangan)</label>
             </div>
 
-            <!-- 工具调用支持 -->
+            <!-- Dukungan panggilan alat -->
             <div class="flex items-center">
-                <input type="checkbox"
-                       name="tool_support"
-                       {{ 'checked' if config.TOOL_SUPPORT else '' }}
-                       class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                <label class="ml-2 block text-sm text-gray-900">启用 Function Call（工具调用）功能</label>
+                <input type="checkbox" name="tool_support" {{ 'checked' if config.TOOL_SUPPORT else '' }}
+                    class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                <label class="ml-2 block text-sm text-gray-900">Aktifkan fungsi Function Call (panggilan alat)</label>
             </div>
 
-            <!-- 高级选项 -->
+            <!-- Opsi lanjutan -->
             <div x-show="showAdvanced" x-transition class="border-t pt-6 space-y-6">
-                <h4 class="text-md font-medium text-gray-900">高级选项</h4>
+                <h4 class="text-md font-medium text-gray-900">Opsi lanjutan</h4>
 
-                <!-- Token 失败阈值 -->
+                <!-- Ambang kegagalan Token -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Token 失败阈值</label>
-                    <input type="number"
-                           name="token_failure_threshold"
-                           value="{{ config.TOKEN_FAILURE_THRESHOLD or 3 }}"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                    <p class="mt-1 text-sm text-gray-500">连续失败多少次后标记 Token 为失败状态</p>
+                    <label class="block text-sm font-medium text-gray-700">Ambang kegagalan Token</label>
+                    <input type="number" name="token_failure_threshold"
+                        value="{{ config.TOKEN_FAILURE_THRESHOLD or 3 }}"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <p class="mt-1 text-sm text-gray-500">Berapa kali kegagalan berturut-turut sebelum menandai Token
+                        sebagai status gagal</p>
                 </div>
 
-                <!-- Token 恢复超时 -->
+                <!-- Waktu habis pemulihan Token -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Token 恢复超时（秒）</label>
-                    <input type="number"
-                           name="token_recovery_timeout"
-                           value="{{ config.TOKEN_RECOVERY_TIMEOUT or 1800 }}"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                    <p class="mt-1 text-sm text-gray-500">Token 失败后多久自动恢复（默认 1800 秒 / 30 分钟）</p>
+                    <label class="block text-sm font-medium text-gray-700">Waktu habis pemulihan Token (detik)</label>
+                    <input type="number" name="token_recovery_timeout"
+                        value="{{ config.TOKEN_RECOVERY_TIMEOUT or 1800 }}"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <p class="mt-1 text-sm text-gray-500">Berapa lama waktu Token gagal sebelum pulih otomatis (default
+                        1800 detik / 30 menit)</p>
                 </div>
 
-                <!-- 工具调用扫描限制 -->
+                <!-- Batas pemindaian panggilan alat -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">工具调用扫描限制（字符数）</label>
-                    <input type="number"
-                           name="scan_limit"
-                           value="{{ config.SCAN_LIMIT or 200000 }}"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                    <p class="mt-1 text-sm text-gray-500">Function Call 功能扫描的最大字符数</p>
+                    <label class="block text-sm font-medium text-gray-700">Batas pemindaian panggilan alat (jumlah
+                        karakter)</label>
+                    <input type="number" name="scan_limit" value="{{ config.SCAN_LIMIT or 200000 }}"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <p class="mt-1 text-sm text-gray-500">Jumlah maksimum karakter yang dipindai oleh fungsi Function
+                        Call</p>
                 </div>
 
-                <!-- LongCat Token -->
+                <!-- Token LongCat -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">LongCat Passport Token</label>
-                    <input type="text"
-                           name="longcat_token"
-                           value="{{ config.LONGCAT_TOKEN or '' }}"
-                           placeholder="可选，用于 LongCat 提供商"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                    <p class="mt-1 text-sm text-gray-500">LongCat 提供商的 passport token（可选）</p>
+                    <label class="block text-sm font-medium text-gray-700">token passport (opsional)</label>
+                    <input type="text" name="longcat_token" value="{{ config.LONGCAT_TOKEN or '' }}"
+                        placeholder="Opsional, untuk penyedia LongCat"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <p class="mt-1 text-sm text-gray-500">Token passport penyedia LongCat (opsional)</p>
                 </div>
 
-                <!-- 默认提供商 -->
+                <!-- Penyedia default -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">默认提供商</label>
+                    <label class="block text-sm font-medium text-gray-700">Penyedia default</label>
                     <select name="default_provider"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        <option value="zai" {{ 'selected' if config.DEFAULT_PROVIDER == 'zai' else '' }}>Z.AI</option>
-                        <option value="k2think" {{ 'selected' if config.DEFAULT_PROVIDER == 'k2think' else '' }}>K2Think</option>
-                        <option value="longcat" {{ 'selected' if config.DEFAULT_PROVIDER == 'longcat' else '' }}>LongCat</option>
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <option value="zai" {{ 'selected' if config.DEFAULT_PROVIDER=='zai' else '' }}>Z.AI</option>
+                        <option value="k2think" {{ 'selected' if config.DEFAULT_PROVIDER=='k2think' else '' }}>K2Think
+                        </option>
+                        <option value="longcat" {{ 'selected' if config.DEFAULT_PROVIDER=='longcat' else '' }}>LongCat
+                        </option>
                     </select>
                 </div>
             </div>
 
-            <!-- 保存按钮 -->
+            <!-- Tombol simpan -->
             <div class="flex items-center justify-between pt-6 border-t">
                 <div id="save-notification" class="flex-1"></div>
                 <div class="flex space-x-3">
-                    <button type="button"
-                            hx-get="/admin/config/reset"
-                            hx-confirm="确定要重置所有配置吗？"
-                            class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                        重置
+                    <button type="button" hx-get="/admin/config/reset"
+                        hx-confirm="Apakah Anda yakin ingin mengatur ulang semua konfigurasi?"
+                        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        Atur ulang
                     </button>
                     <button type="submit"
-                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        💾 保存并重载
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        💾 Simpan dan muat ulang
                     </button>
                 </div>
             </div>
 
-            <!-- 配置说明 -->
+            <!-- Instruksi konfigurasi -->
             <div class="mt-4 bg-blue-50 border-l-4 border-blue-400 p-4">
                 <div class="flex">
                     <div class="flex-shrink-0">
                         <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd" />
                         </svg>
                     </div>
                     <div class="ml-3">
                         <p class="text-sm text-blue-700">
-                            <strong>提示：</strong>配置保存后会自动热重载，大部分配置无需重启服务即可生效。<br>
-                            仅 <code class="bg-blue-100 px-1 py-0.5 rounded">监听端口</code> 和 <code class="bg-blue-100 px-1 py-0.5 rounded">服务名称</code> 需要手动重启服务。
+                            <strong>Petunjuk:</strong>Setelah konfigurasi disimpan akan otomatis dimuat ulang secara
+                            panas, sebagian besar konfigurasi dapat berlaku tanpa perlu me-restart layanan. Hanya <code
+                                class="bg-blue-100 px-1 py-0.5 rounded">port pendengaran</code> dan <code
+                                class="bg-blue-100 px-1 py-0.5 rounded">nama layanan</code> yang perlu di-restart secara
+                            manual.
                         </p>
                     </div>
                 </div>
@@ -187,20 +175,18 @@
         </form>
     </div>
 
-    <!-- 配置文件预览 -->
+    <!-- Pratinjau file konfigurasi -->
     <div class="bg-white shadow rounded-lg">
         <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h3 class="text-lg font-medium text-gray-900">.env 文件预览</h3>
-            <button
-                hx-get="/admin/api/env-preview"
-                hx-target="#env-preview"
+            <h3 class="text-lg font-medium text-gray-900">Pratinjau file .env</h3>
+            <button hx-get="/admin/api/env-preview" hx-target="#env-preview"
                 class="text-sm text-indigo-600 hover:text-indigo-700">
-                刷新
+                Segarkan
             </button>
         </div>
         <div class="p-6">
             <div id="env-preview" class="bg-gray-50 rounded-md p-4 font-mono text-sm overflow-x-auto">
-                <pre>{{ env_content or '加载中...' }}</pre>
+                <pre>{{ env_content or 'Sedang memuat...' }}</pre>
             </div>
         </div>
     </div>
@@ -209,8 +195,8 @@
 
 {% block extra_scripts %}
 <script>
-    // 配置保存成功后的处理
-    document.body.addEventListener('htmx:afterSwap', function(evt) {
+    // Penanganan setelah konfigurasi berhasil disimpan
+    document.body.addEventListener('htmx:afterSwap', function (evt) {
         if (evt.detail.target.id === 'save-notification') {
             // 3秒后自动隐藏通知
             setTimeout(() => {

@@ -43,11 +43,11 @@ async def lifespan(app: FastAPI):
     )
 
     if not token_pool and not settings.ANONYMOUS_MODE:
-        logger.warning("⚠️ 未找到可用 Token 且未启用匿名模式，服务可能无法正常工作")
+        logger.warning("⚠️ Token yang tersedia tidak ditemukan dan mode anonim tidak diaktifkan, layanan mungkin tidak berfungsi dengan normal")
 
     yield
 
-    logger.info("🔄 应用正在关闭...")
+    logger.info("🔄 Aplikasi sedang ditutup...")
 
 
 # Create FastAPI app with lifespan
@@ -95,10 +95,10 @@ async def root():
 def run_server():
     service_name = settings.SERVICE_NAME
 
-    logger.info(f"🚀 启动 {service_name} 服务...")
-    logger.info(f"📡 监听地址: 0.0.0.0:{settings.LISTEN_PORT}")
-    logger.info(f"🔧 调试模式: {'开启' if settings.DEBUG_LOGGING else '关闭'}")
-    logger.info(f"🔐 匿名模式: {'开启' if settings.ANONYMOUS_MODE else '关闭'}")
+    logger.info(f"🚀 Memulai layanan {service_name}...")
+    logger.info(f"📡 Alamat pendengaran: 0.0.0.0:{settings.LISTEN_PORT}")
+    logger.info(f"🔧 Mode debug: {'Diaktifkan' if settings.DEBUG_LOGGING else 'Dimatikan'}")
+    logger.info(f"🔐 Mode anonim: {'Diaktifkan' if settings.ANONYMOUS_MODE else 'Dimatikan'}")
 
     try:
         Granian(
@@ -111,9 +111,9 @@ def run_server():
             **RELOAD_CONFIG,    # 热重载配置
         ).serve()
     except KeyboardInterrupt:
-        logger.info("🛑 收到中断信号，正在关闭服务...")
+        logger.info("🛑 Menerima sinyal interupsi, sedang menutup layanan...")
     except Exception as e:
-        logger.error(f"❌ 服务启动失败: {e}")
+        logger.error(f"❌ Gagal memulai layanan: {e}")
         sys.exit(1)
 
 

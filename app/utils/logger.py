@@ -14,14 +14,14 @@ def setup_logger(log_dir, log_retention_days=7, log_rotation="1 day", debug_mode
     Create a logger instance
 
     Parameters:
-        log_dir (str): 日志目录
-        log_retention_days (int): 日志保留天数
-        log_rotation (str): 日志轮转间隔
-        debug_mode (bool): 是否开启调试模式
+        log_dir (str): Direktori log
+        log_retention_days (int): Jumlah hari retensi log
+        log_rotation (str): Interval rotasi log
+        debug_mode (bool): Apakah akan mengaktifkan mode debug
     """
     global app_logger
 
-    # 移除所有现有的日志处理器（支持热重载）
+    # Hapus semua prosesor log yang ada (mendukung pemuatan ulang panas)
     logger.remove()
 
     log_level = "DEBUG" if debug_mode else "INFO"
@@ -57,8 +57,8 @@ def setup_logger(log_dir, log_retention_days=7, log_rotation="1 day", debug_mode
                 catch=True,
             )
         except (PermissionError, OSError) as e:
-            # 如果无法创建日志目录或文件，降级为仅控制台输出
-            logger.warning(f"⚠️ 无法创建日志文件 ({e})，将仅使用控制台输出")
+            # Jika tidak dapat membuat direktori atau file log, turunkan ke hanya output konsol
+            logger.warning(f"⚠️ Tidak dapat membuat file log ({e}), hanya akan menggunakan output konsol")
 
     app_logger = logger
 
@@ -69,8 +69,8 @@ def get_logger():
     """Get the logger instance"""
     global app_logger
     if app_logger is None:
-        # 如果没有设置过logger，使用默认配置
-        logger.remove()  # 移除所有现有处理器
+        # Jika logger belum pernah diatur, gunakan konfigurasi default
+        logger.remove()  # Hapus semua prosesor yang ada
         logger.add(sys.stderr, level="INFO", format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | <level>{message}</level>")
         app_logger = logger
     return app_logger
@@ -84,22 +84,22 @@ if __name__ == "__main__":
         try:
             setup_logger(temp_dir, debug_mode=True)
 
-            logger.debug("这是一条调试日志")
-            logger.info("这是一条信息日志")
-            logger.warning("这是一条警告日志")
-            logger.error("这是一条错误日志")
-            logger.critical("这是一条严重日志")
+            logger.debug("Ini adalah log debug")
+            logger.info("Ini adalah log informasi")
+            logger.warning("Ini adalah log peringatan")
+            logger.error("Ini adalah log kesalahan")
+            logger.critical("Ini adalah log kritis")
 
             try:
                 1 / 0
             except ZeroDivisionError:
-                logger.exception("发生了除零异常")
+                logger.exception("Terjadi pengecualian pembagian nol")
 
-            print("✅ 日志测试完成")
+            print("✅ Uji log selesai")
 
             logger.remove()
 
         except Exception as e:
-            print(f"❌ 日志测试失败: {e}")
+            print(f"❌ Uji log gagal: {e}")
             logger.remove()
             raise

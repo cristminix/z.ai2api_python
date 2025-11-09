@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-LongCat 提供商适配器
+Adaptor Penyedia LongCat
 """
 
 import json
@@ -22,10 +22,10 @@ logger = get_logger()
 
 
 class LongCatProvider(BaseProvider):
-    """LongCat 提供商"""
+    """Penyedia LongCat"""
 
     def __init__(self):
-        # 使用动态生成的 headers，不包含 User-Agent（将在请求时动态生成）
+        # Gunakan header yang dibuat secara dinamis, tanpa User-Agent (akan dibuat secara dinamis saat permintaan)
         config = ProviderConfig(
             name="longcat",
             api_endpoint="https://longcat.chat/api/v1/chat-completion",
@@ -43,16 +43,16 @@ class LongCatProvider(BaseProvider):
         self.session_delete_url = f"{self.base_url}/api/v1/session-delete"
     
     def get_supported_models(self) -> List[str]:
-        """获取支持的模型列表"""
+        """Dapatkan daftar model yang didukung"""
         return ["LongCat-Flash", "LongCat", "LongCat-Search"]
 
     def get_passport_token(self) -> Optional[str]:
-        """获取 LongCat passport token"""
-        # 优先使用环境变量中的单个token
+        """Dapatkan token paspor LongCat"""
+        # Prioritaskan penggunaan token tunggal dari variabel lingkungan
         if settings.LONGCAT_TOKEN:
             return settings.LONGCAT_TOKEN
 
-        # 从token文件中随机选择一个
+        # Pilih token secara acak dari file token
         token_list = settings.longcat_token_list
         if token_list:
             return random.choice(token_list)
@@ -60,12 +60,12 @@ class LongCatProvider(BaseProvider):
         return None
 
     def create_headers_with_auth(self, token: str, user_agent: str, referer: str = None) -> Dict[str, str]:
-        """创建带认证的请求头"""
+        """Buat header permintaan dengan otentikasi"""
         headers = {
             "User-Agent": user_agent,
             "Content-Type": "application/json",
             "x-requested-with": "XMLHttpRequest",
-            "X-Client-Language": "zh",
+            "X-Client-Language": "id",
             "Cookie": f"passport_token_key={token}",
             "Accept": "text/event-stream,application/json",
             "Origin": "https://longcat.chat"
@@ -77,7 +77,7 @@ class LongCatProvider(BaseProvider):
         return headers
 
     async def create_session(self, token: str, user_agent: str) -> str:
-        """创建会话并返回 conversation_id"""
+        """Buat sesi dan kembalikan conversation_id"""
         headers = self.create_headers_with_auth(token, user_agent)
         data = {"model": "", "agentId": ""}
 
@@ -89,16 +89,16 @@ class LongCatProvider(BaseProvider):
             )
 
             if response.status_code != 200:
-                raise Exception(f"会话创建失败: {response.status_code}")
+                raise Exception(f"Pembuatan sesi gagal: {response.status_code}")
 
             response_data = response.json()
             if response_data.get("code") != 0:
-                raise Exception(f"会话创建错误: {response_data.get('message')}")
+                raise Exception(f"Kesalahan pembuatan sesi: {response_data.get('message')}")
 
             return response_data["data"]["conversationId"]
 
     async def delete_session(self, conversation_id: str, token: str, user_agent: str) -> None:
-        """删除会话"""
+        """Hapus sesi"""
         try:
             headers = self.create_headers_with_auth(
                 token,
@@ -111,23 +111,23 @@ class LongCatProvider(BaseProvider):
                 response = await client.get(url, headers=headers)
 
                 if response.status_code == 200:
-                    self.logger.debug(f"成功删除会话 {conversation_id}")
+                    self.logger.debug(f"Sesi berhasil dihapus {conversation_id}")
                 else:
-                    self.logger.warning(f"删除会话失败: {response.status_code}")
+                    self.logger.warning(f"Penghapusan sesi gagal: {response.status_code}")
         except Exception as e:
-            self.logger.error(f"删除会话出错: {e}")
+            self.logger.error(f"Terjadi kesalahan saat menghapus sesi: {e}")
 
     def schedule_session_deletion(self, conversation_id: str, token: str, user_agent: str):
-        """异步删除会话（不等待）"""
+        """Hapus sesi secara asinkron (tanpa menunggu)"""
         asyncio.create_task(self.delete_session(conversation_id, token, user_agent))
 
     def format_messages_for_longcat(self, messages: List[Message]) -> str:
-        """格式化消息为 LongCat 格式"""
+        """Format pesan ke format LongCat"""
         formatted_messages = []
         for msg in messages:
             content = msg.content
             if isinstance(content, list):
-                # 处理多模态内容，提取文本
+                # Tangani konten multimodal, ekstrak teks
                 text_parts = []
                 for part in content:
                     if hasattr(part, 'text') and part.text:
@@ -137,23 +137,23 @@ class LongCatProvider(BaseProvider):
         return ";".join(formatted_messages)
     
     async def transform_request(self, request: OpenAIRequest) -> Dict[str, Any]:
-        """转换OpenAI请求为LongCat格式"""
-        # 获取认证token
+        """Konversi permintaan OpenAI ke format LongCat"""
+        # Dapatkan token otentikasi
         passport_token = self.get_passport_token()
         if not passport_token:
-            raise Exception("未配置 LongCat passport token，请设置 LONGCAT_TOKEN 环境变量")
+            raise Exception("Token paspor LongCat belum dikonfigurasi, harap atur variabel lingkungan LONGCAT_TOKEN")
 
-        # 生成动态 User-Agent
+        # Hasilkan User-Agent dinamis
         dynamic_headers = get_dynamic_headers()
         user_agent = dynamic_headers.get("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 
-        # 创建会话
+        # Buat sesi
         conversation_id = await self.create_session(passport_token, user_agent)
 
-        # 格式化消息内容
+        # Format konten pesan
         formatted_content = self.format_messages_for_longcat(request.messages)
 
-        # 构建LongCat请求载荷
+        # Bangun payload permintaan LongCat
         payload = {
             "conversationId": conversation_id,
             "content": formatted_content,
@@ -162,7 +162,7 @@ class LongCatProvider(BaseProvider):
             "parentMessageId": 0
         }
 
-        # 创建带认证的请求头
+        # Buat header permintaan dengan otentikasi
         headers = self.create_headers_with_auth(
             passport_token,
             user_agent,
@@ -184,14 +184,14 @@ class LongCatProvider(BaseProvider):
         request: OpenAIRequest,
         **kwargs
     ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
-        """聊天完成接口"""
+        """Antarmuka penyelesaian obrolan"""
         self.log_request(request)
 
         try:
-            # 转换请求
+            # Konversi permintaan
             transformed = await self.transform_request(request)
 
-            # 发送请求
+            # Kirim permintaan
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
                     transformed["url"],
@@ -200,22 +200,22 @@ class LongCatProvider(BaseProvider):
                 )
 
                 if not response.is_success:
-                    error_msg = f"LongCat API 错误: {response.status_code}"
+                    error_msg = f"Kesalahan API LongCat: {response.status_code}"
                     try:
                         error_detail = await response.atext()
-                        self.logger.error(f"❌ API 错误详情: {error_detail}")
+                        self.logger.error(f"❌ Detail kesalahan API: {error_detail}")
                     except:
                         pass
                     self.log_response(False, error_msg)
                     return self.handle_error(Exception(error_msg))
 
-                # 转换响应
+                # Konversi respons
                 return await self.transform_response(response, request, transformed)
 
         except Exception as e:
-            self.logger.error(f"❌ LongCat 请求处理异常: {e}")
+            self.logger.error(f"❌ Pengecualian penanganan permintaan LongCat: {e}")
             self.log_response(False, str(e))
-            return self.handle_error(e, "请求处理")
+            return self.handle_error(e, "Penanganan permintaan")
     
     async def transform_response(
         self,
@@ -223,7 +223,7 @@ class LongCatProvider(BaseProvider):
         request: OpenAIRequest,
         transformed: Dict[str, Any]
     ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
-        """转换LongCat响应为OpenAI格式"""
+        """Konversi respons LongCat ke format OpenAI"""
         chat_id = self.create_chat_id()
         model = transformed["model"]
         conversation_id = transformed["conversation_id"]
@@ -248,11 +248,11 @@ class LongCatProvider(BaseProvider):
         passport_token: str,
         user_agent: str
     ) -> AsyncGenerator[str, None]:
-        """处理LongCat流式响应"""
+        """Tangani respons streaming LongCat"""
         session_deleted = False
 
         try:
-            # 发送初始角色块
+            # Kirim blok peran awal
             yield await self.format_sse_chunk(
                 self.create_openai_chunk(chat_id, model, {"role": "assistant"})
             )
@@ -262,47 +262,47 @@ class LongCatProvider(BaseProvider):
             async for line in response.aiter_lines():
                 line = line.strip()
 
-                # 首先检查是否是错误响应（JSON格式但不是SSE格式）
+                # Pertama, periksa apakah ini adalah respons kesalahan (format JSON tetapi bukan format SSE)
                 if not line.startswith('data:'):
-                    # 尝试解析为JSON错误响应
+                    # Coba parse sebagai respons kesalahan JSON
                     try:
                         error_data = json.loads(line)
                         if isinstance(error_data, dict) and 'code' in error_data and 'message' in error_data:
-                            # 这是一个错误响应
-                            self.logger.error(f"❌ LongCat API 返回错误: {error_data}")
-                            error_message = error_data.get('message', '未知错误')
+                            # Ini adalah respons kesalahan
+                            self.logger.error(f"❌ API LongCat mengembalikan kesalahan: {error_data}")
+                            error_message = error_data.get('message', 'Kesalahan tidak diketahui')
                             error_code = error_data.get('code', 'unknown')
 
-                            # 使用统一的错误处理函数
-                            error_exception = Exception(f"LongCat API 错误 ({error_code}): {error_message}")
-                            error_response = self.handle_error(error_exception, "API响应")
+                            # Gunakan fungsi penanganan kesalahan terpadu
+                            error_exception = Exception(f"Kesalahan API LongCat ({error_code}): {error_message}")
+                            error_response = self.handle_error(error_exception, "Respons API")
 
-                            # 发送错误响应块
+                            # Kirim blok respons kesalahan
                             yield await self.format_sse_chunk(error_response)
                             yield await self.format_sse_done()
 
-                            # 清理会话
+                            # Bersihkan sesi
                             if not session_deleted:
                                 self.schedule_session_deletion(conversation_id, passport_token, user_agent)
                                 session_deleted = True
                             return
                     except json.JSONDecodeError:
-                        # 不是JSON，跳过这行
+                        # Bukan JSON, lewati baris ini
                         continue
 
-                    # 如果不是错误响应，跳过
+                    # Jika bukan respons kesalahan, lewati
                     continue
 
                 data_str = line[5:].strip()
                 if data_str == '[DONE]':
-                    # 如果还没有发送完成块，发送一个
+                    # Jika blok selesai belum dikirim, kirim satu
                     if not stream_finished:
                         yield await self.format_sse_chunk(
                             self.create_openai_chunk(chat_id, model, {}, "stop")
                         )
                     yield await self.format_sse_done()
 
-                    # 清理会话
+                    # Bersihkan sesi
                     if not session_deleted:
                         self.schedule_session_deletion(conversation_id, passport_token, user_agent)
                         session_deleted = True
@@ -311,7 +311,7 @@ class LongCatProvider(BaseProvider):
                 try:
                     longcat_data = json.loads(data_str)
 
-                    # 获取 delta 内容
+                    # Dapatkan konten delta
                     choices = longcat_data.get("choices", [])
                     if not choices:
                         continue
@@ -320,7 +320,7 @@ class LongCatProvider(BaseProvider):
                     content = delta.get("content")
                     finish_reason = choices[0].get("finishReason")
 
-                    # 只有当内容不为空时才发送内容块
+                    # Kirim blok konten hanya jika konten tidak kosong
                     if content is not None and content != "":
                         openai_chunk = self.create_openai_chunk(
                             chat_id,
@@ -329,8 +329,8 @@ class LongCatProvider(BaseProvider):
                         )
                         yield await self.format_sse_chunk(openai_chunk)
 
-                    # 检查是否为流的结束
-                    # LongCat 使用 lastOne=true 来标识最后一个块
+                    # Periksa apakah ini akhir dari stream
+                    # LongCat menggunakan lastOne=true untuk mengidentifikasi blok terakhir
                     if longcat_data.get("lastOne") and not stream_finished:
                         yield await self.format_sse_chunk(
                             self.create_openai_chunk(chat_id, model, {}, "stop")
@@ -338,13 +338,13 @@ class LongCatProvider(BaseProvider):
                         yield await self.format_sse_done()
                         stream_finished = True
 
-                        # 清理会话
+                        # Bersihkan sesi
                         if not session_deleted:
                             self.schedule_session_deletion(conversation_id, passport_token, user_agent)
                             session_deleted = True
                         break
 
-                    # 备用检查：如果有 finishReason 但没有 lastOne，也可能是结束
+                    # Pemeriksaan alternatif: Jika ada finishReason tetapi tidak ada lastOne, ini mungkin juga akhir
                     elif finish_reason == "stop" and longcat_data.get("contentStatus") == "FINISHED" and not stream_finished:
                         yield await self.format_sse_chunk(
                             self.create_openai_chunk(chat_id, model, {}, "stop")
@@ -352,29 +352,29 @@ class LongCatProvider(BaseProvider):
                         yield await self.format_sse_done()
                         stream_finished = True
 
-                        # 清理会话
+                        # Bersihkan sesi
                         if not session_deleted:
                             self.schedule_session_deletion(conversation_id, passport_token, user_agent)
                             session_deleted = True
                         break
 
                 except json.JSONDecodeError as e:
-                    self.logger.error(f"❌ 解析LongCat流数据错误: {e}")
+                    self.logger.error(f"❌ Kesalahan parsing data stream LongCat: {e}")
                     continue
                 except Exception as e:
-                    self.logger.error(f"❌ 处理LongCat流数据错误: {e}")
+                    self.logger.error(f"❌ Kesalahan penanganan data stream LongCat: {e}")
                     continue
 
         except Exception as e:
-            self.logger.error(f"❌ LongCat流处理错误: {e}")
-            # 发送错误结束块（只有在还没有结束的情况下）
+            self.logger.error(f"❌ Kesalahan penanganan stream LongCat: {e}")
+            # Kirim blok akhir kesalahan (hanya jika belum berakhir)
             if not stream_finished:
                 yield await self.format_sse_chunk(
                     self.create_openai_chunk(chat_id, model, {}, "stop")
                 )
                 yield await self.format_sse_done()
         finally:
-            # 确保会话被清理
+            # Pastikan sesi dibersihkan
             if not session_deleted:
                 self.schedule_session_deletion(conversation_id, passport_token, user_agent)
     
@@ -387,7 +387,7 @@ class LongCatProvider(BaseProvider):
         passport_token: str,
         user_agent: str
     ) -> Dict[str, Any]:
-        """处理LongCat非流式响应"""
+        """Tangani respons non-streaming LongCat"""
         full_content = ""
         usage_info = {
             "prompt_tokens": 0,
@@ -399,24 +399,24 @@ class LongCatProvider(BaseProvider):
             async for line in response.aiter_lines():
                 line = line.strip()
                 if not line.startswith('data:'):
-                    # 检查是否是错误响应
+                    # Periksa apakah ini adalah respons kesalahan
                     try:
                         error_data = json.loads(line)
                         if isinstance(error_data, dict) and 'code' in error_data and 'message' in error_data:
-                            # 这是一个错误响应
-                            self.logger.error(f"❌ LongCat API 返回错误: {error_data}")
-                            error_message = error_data.get('message', '未知错误')
+                            # Ini adalah respons kesalahan
+                            self.logger.error(f"❌ API LongCat mengembalikan kesalahan: {error_data}")
+                            error_message = error_data.get('message', 'Kesalahan tidak diketahui')
                             error_code = error_data.get('code', 'unknown')
 
-                            # 使用统一的错误处理函数
-                            error_exception = Exception(f"LongCat API 错误 ({error_code}): {error_message}")
+                            # Gunakan fungsi penanganan kesalahan terpadu
+                            error_exception = Exception(f"Kesalahan API LongCat ({error_code}): {error_message}")
 
-                            # 清理会话
+                            # Bersihkan sesi
                             self.schedule_session_deletion(conversation_id, passport_token, user_agent)
 
-                            return self.handle_error(error_exception, "API响应")
+                            return self.handle_error(error_exception, "Respons API")
                     except json.JSONDecodeError:
-                        # 不是JSON，跳过这行
+                        # Bukan JSON, lewati baris ini
                         pass
                     continue
 
@@ -427,7 +427,7 @@ class LongCatProvider(BaseProvider):
                 try:
                     chunk = json.loads(data_str)
 
-                    # 提取内容 - 只有当内容不为空时才添加
+                    # Ekstrak konten - tambahkan hanya jika konten tidak kosong
                     choices = chunk.get("choices", [])
                     if choices:
                         delta = choices[0].get("delta", {})
@@ -435,7 +435,7 @@ class LongCatProvider(BaseProvider):
                         if content is not None and content != "":
                             full_content += content
 
-                    # 提取使用信息（通常在最后的块中）
+                    # Ekstrak informasi penggunaan (biasanya di blok terakhir)
                     if chunk.get("tokenInfo"):
                         token_info = chunk["tokenInfo"]
                         usage_info = {
@@ -444,7 +444,7 @@ class LongCatProvider(BaseProvider):
                             "total_tokens": token_info.get("totalTokens", 0)
                         }
 
-                    # 如果是最后一个块，可以提前结束
+                    # Jika ini blok terakhir, bisa berakhir lebih awal
                     if chunk.get("lastOne"):
                         break
 
@@ -452,10 +452,10 @@ class LongCatProvider(BaseProvider):
                     continue
 
         except Exception as e:
-            self.logger.error(f"❌ 处理LongCat非流式响应错误: {e}")
-            full_content = "处理响应时发生错误"
+            self.logger.error(f"❌ Kesalahan penanganan respons non-streaming LongCat: {e}")
+            full_content = "Terjadi kesalahan saat memproses respons"
         finally:
-            # 清理会话
+            # Bersihkan sesi
             self.schedule_session_deletion(conversation_id, passport_token, user_agent)
 
         return self.create_openai_response(

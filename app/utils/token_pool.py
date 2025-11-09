@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Token 池管理器 - 基于数据库的 Token 轮询和健康检查
+Manajer kumpulan Token - Rotasi Token dan pemeriksaan kesehatan berbasis database
 
-核心功能：
-1. Token 轮询机制 - 负载均衡和容错
-2. Z.AI 官方认证接口验证 - 基于 role 字段区分用户类型
-3. Token 健康度监控 - 自动禁用失败 Token
-4. 数据库集成 - 与 TokenDAO 协同工作
+Fitur inti:
+1. Mekanisme rotasi Token - Load balancing dan toleransi kesalahan
+2. Verifikasi antarmuka autentikasi resmi Z.AI - Membedakan jenis pengguna berdasarkan bidang peran
+3. Pemantauan kesehatan Token - Otomatis menonaktifkan Token yang gagal
+4. Integrasi database - Bekerja sama dengan TokenDAO
 """
 
 import asyncio
@@ -26,9 +26,9 @@ from app.utils.logger import logger
 
 @dataclass
 class TokenStatus:
-    """Token 运行时状态（内存中）"""
+    """Status runtime Token (dalam memori)"""
     token: str
-    token_id: int  # 数据库 ID，用于同步统计
+    token_id: int  # ID database, digunakan untuk sinkronisasi statistik
     token_type: str = "unknown"  # "user", "guest", "unknown"
     is_available: bool = True
     failure_count: int = 0
@@ -39,7 +39,7 @@ class TokenStatus:
 
     @property
     def success_rate(self) -> float:
-        """成功率"""
+        """Tingkat keberhasilan"""
         if self.total_requests == 0:
             return 1.0
         return self.successful_requests / self.total_requests
@@ -47,30 +47,30 @@ class TokenStatus:
     @property
     def is_healthy(self) -> bool:
         """
-        Token 健康状态判断
+        Penentuan status kesehatan Token
 
-        健康标准：
-        1. 必须是认证用户 Token (token_type = "user")
-        2. 当前可用 (is_available = True)
-        3. 成功率 >= 50% 或总请求数 <= 3（新 Token 容错）
+        Standar kesehatan:
+        1. Harus berupa Token pengguna terautentikasi (token_type = "user")
+        2. Saat ini tersedia (is_available = True)
+        3. Tingkat keberhasilan >= 50% atau jumlah total permintaan <= 3 (toleransi Token baru)
 
-        注意：
-        - guest Token 永远不健康
-        - unknown Token 永远不健康
+        Perhatian:
+        - Token guest selalu tidak sehat
+        - Token unknown selalu tidak sehat
         """
-        # guest 和 unknown token 永远不健康
+        # Token guest dan unknown selalu tidak sehat
         if self.token_type != "user":
             return False
 
-        # 不可用的 token 不健康
+        # Token yang tidak tersedia tidak sehat
         if not self.is_available:
             return False
 
-        # 新 token 容错：请求数很少时，只要没失败就健康
+        # Toleransi kesalahan token baru: ketika jumlah permintaan sangat sedikit, token dianggap sehat selama tidak ada kegagalan
         if self.total_requests <= 3:
             return self.failure_count == 0
 
-        # 基于成功率判断
+        # Penilaian berdasarkan tingkat keberhasilan
         return self.success_rate >= 0.5
 
 
@@ -78,13 +78,13 @@ class TokenStatus:
 
 
 class ZAITokenValidator:
-    """Z.AI Token 验证器（使用官方认证接口）"""
+    """Validator Token Z.AI (menggunakan antarmuka autentikasi resmi)"""
 
     AUTH_URL = "https://chat.z.ai/api/v1/auths/"
 
     @staticmethod
     def get_headers(token: str) -> Dict[str, str]:
-        """构建认证请求头"""
+        """Membangun header permintaan autentikasi"""
         return {
             "Accept": "*/*",
             "Accept-Language": "zh-CN,zh;q=0.9",
@@ -105,16 +105,16 @@ class ZAITokenValidator:
     @classmethod
     async def validate_token(cls, token: str) -> Tuple[str, bool, Optional[str]]:
         """
-        验证 Token 有效性并返回类型
+        Verifikasi validitas Token dan kembalikan jenisnya
 
         Args:
-            token: 待验证的 Token
+            token: Token yang akan diverifikasi
 
         Returns:
             (token_type, is_valid, error_message)
             - token_type: "user" | "guest" | "unknown"
-            - is_valid: True 表示是有效的认证用户 Token
-            - error_message: 失败原因（仅在 is_valid=False 时有值）
+            - is_valid: True berarti Token pengguna terautentikasi yang valid
+            - error_message: Alasan kegagalan (hanya memiliki nilai ketika is_valid=False)
         """
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
@@ -123,68 +123,68 @@ class ZAITokenValidator:
                     headers=cls.get_headers(token)
                 )
 
-                # 解析响应
+                # Parsing respons
                 return cls._parse_auth_response(response)
 
         except httpx.TimeoutException:
-            return ("unknown", False, "请求超时")
+            return ("unknown", False, "Permintaan timeout")
         except httpx.ConnectError:
-            return ("unknown", False, "连接失败")
+            return ("unknown", False, "Koneksi gagal")
         except Exception as e:
-            return ("unknown", False, f"验证异常: {str(e)}")
+            return ("unknown", False, f"Exception validasi: {str(e)}")
 
     @staticmethod
     def _parse_auth_response(response: httpx.Response) -> Tuple[str, bool, Optional[str]]:
         """
-        解析 Z.AI 认证接口响应
+        Parse respons antarmuka autentikasi Z.AI
 
-        响应格式示例：
+        Contoh format respons:
         {
             "id": "...",
             "email": "user@example.com",
-            "role": "user"  # 或 "guest"
+            "role": "user"  # atau "guest"
         }
 
-        验证规则：
-        - role: "user" → 认证用户 Token（有效，可添加）
-        - role: "guest" → 匿名用户 Token（无效，拒绝添加）
-        - 其他情况 → 无效 Token
+        Aturan verifikasi:
+        - role: "user" → Token pengguna terautentikasi (valid, dapat ditambahkan)
+        - role: "guest" → Token pengguna anonim (tidak valid, tolak penambahan)
+        - Kasus lain → Token tidak valid
         """
-        # 检查 HTTP 状态码
+        # Periksa kode status HTTP
         if response.status_code != 200:
             return ("unknown", False, f"HTTP {response.status_code}")
 
         try:
             data = response.json()
 
-            # 验证响应格式
+            # Verifikasi format respons
             if not isinstance(data, dict):
-                return ("unknown", False, "无效的响应格式")
+                return ("unknown", False, "Format respons tidak valid")
 
-            # 检查是否包含错误信息
+            # Periksa apakah ada informasi error
             if "error" in data or "message" in data:
-                error_msg = data.get("error") or data.get("message", "未知错误")
+                error_msg = data.get("error") or data.get("message", "Kesalahan tidak diketahui")
                 return ("unknown", False, str(error_msg))
 
-            # 核心验证：检查 role 字段
+            # Verifikasi inti: periksa bidang role
             role = data.get("role")
 
             if role == "user":
                 return ("user", True, None)
             elif role == "guest":
-                return ("guest", False, "匿名用户 Token 不允许添加")
+                return ("guest", False, "Token pengguna anonim tidak diizinkan untuk ditambahkan")
             else:
-                return ("unknown", False, f"未知 role: {role}")
+                return ("unknown", False, f"role tidak diketahui: {role}")
 
         except (ValueError, Exception) as e:
-            return ("unknown", False, f"解析响应失败: {str(e)}")
+            return ("unknown", False, f"Gagal memparse respons: {str(e)}")
 
 
 # ==================== Token 池管理器 ====================
 
 
 class TokenPool:
-    """Token 池管理器（数据库驱动）"""
+    """Manajer kumpulan Token (berbasis database)"""
 
     def __init__(
         self,
@@ -193,21 +193,21 @@ class TokenPool:
         recovery_timeout: int = 1800
     ):
         """
-        初始化 Token 池
+        Inisialisasi kumpulan Token
 
         Args:
-            tokens: Token 列表 [(token_id, token_value, token_type), ...]
-            failure_threshold: 失败阈值，超过此次数将标记为不可用
-            recovery_timeout: 恢复超时时间（秒），失败 Token 在此时间后重新尝试
+            tokens: Daftar Token [(token_id, token_value, token_type), ...]
+            failure_threshold: Ambang kegagalan, melebihi jumlah ini akan ditandai sebagai tidak tersedia
+            recovery_timeout: Waktu habis pemulihan (detik), Token gagal akan dicoba kembali setelah waktu ini
         """
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
         self._lock = Lock()
         self._current_index = 0
 
-        # 初始化 Token 状态（内存中）
+        # Inisialisasi status Token (dalam memori)
         self.token_statuses: Dict[str, TokenStatus] = {}
-        self.token_id_map: Dict[str, int] = {}  # token -> token_id 映射
+        self.token_id_map: Dict[str, int] = {}  # pemetaan token -> token_id
 
         for token_id, token_value, token_type in tokens:
             if token_value and token_value not in self.token_statuses:
@@ -219,14 +219,14 @@ class TokenPool:
                 self.token_id_map[token_value] = token_id
 
         if not self.token_statuses:
-            logger.warning("⚠️ Token 池为空，将依赖匿名模式")
+            logger.warning("⚠️ Kumpulan Token kosong, akan bergantung pada mode anonim")
 
     def get_next_token(self) -> Optional[str]:
         """
-        获取下一个可用的认证用户 Token（轮询算法）
+        Dapatkan Token pengguna terautentikasi berikutnya yang tersedia (algoritma rotasi)
 
         Returns:
-            可用的 Token 字符串，如果没有可用 Token 则返回 None
+            String Token yang tersedia, jika tidak ada Token yang tersedia maka kembalikan None
         """
         with self._lock:
             if not self.token_statuses:
@@ -234,15 +234,15 @@ class TokenPool:
 
             available_tokens = self._get_available_user_tokens()
             if not available_tokens:
-                # 尝试恢复过期的失败 Token
+                # Coba pulihkan Token yang gagal kedaluwarsa
                 self._try_recover_failed_tokens()
                 available_tokens = self._get_available_user_tokens()
 
                 if not available_tokens:
-                    logger.warning("⚠️ 没有可用的认证用户 Token")
+                    logger.warning("⚠️ Tidak ada Token pengguna terautentikasi yang tersedia")
                     return None
 
-            # 轮询选择
+            # Pemilihan round-robin
             token = available_tokens[self._current_index % len(available_tokens)]
             self._current_index = (self._current_index + 1) % len(available_tokens)
 
@@ -250,9 +250,9 @@ class TokenPool:
 
     def _get_available_user_tokens(self) -> List[str]:
         """
-        获取当前可用的认证用户 Token 列表
+        Dapatkan daftar Token pengguna terautentikasi yang saat ini tersedia
 
-        过滤条件：
+        Kondisi filter:
         1. is_available = True
         2. token_type == "user"
         """
@@ -261,24 +261,24 @@ class TokenPool:
             if status.is_available and status.token_type == "user"
         ]
 
-        # 警告：如果有 guest token 但没有 user token
+        # Peringatan: jika ada guest token tapi tidak ada user token
         if not available_user_tokens and self.token_statuses:
             guest_count = sum(
                 1 for status in self.token_statuses.values()
                 if status.token_type == "guest"
             )
             if guest_count > 0:
-                logger.warning(f"⚠️ 检测到 {guest_count} 个匿名用户 Token，轮询机制将跳过这些 Token")
+                logger.warning(f"⚠️ Mendeteksi {guest_count} Token pengguna anonim, mekanisme rotasi akan melewati Token ini")
 
         return available_user_tokens
 
     def _try_recover_failed_tokens(self):
-        """尝试恢复失败的 Token（仅针对认证用户 Token）"""
+        """Coba pulihkan Token yang gagal (hanya untuk Token pengguna terautentikasi)"""
         current_time = time.time()
         recovered_count = 0
 
         for status in self.token_statuses.values():
-            # 只恢复认证用户 Token
+            # Hanya pulihkan Token pengguna terautentikasi
             if (
                 status.token_type == "user"
                 and not status.is_available
@@ -287,27 +287,27 @@ class TokenPool:
                 status.is_available = True
                 status.failure_count = 0
                 recovered_count += 1
-                logger.info(f"🔄 恢复失败 Token: {status.token[:20]}...")
+                logger.info(f"🔄 Memulihkan Token gagal: {status.token[:20]}...")
 
         if recovered_count > 0:
-            logger.info(f"✅ 恢复了 {recovered_count} 个失败的 Token")
+            logger.info(f"✅ Memulihkan {recovered_count} Token yang gagal")
 
     def mark_token_success(self, token: str):
-        """标记 Token 使用成功"""
+        """Tandai penggunaan Token berhasil"""
         with self._lock:
             if token in self.token_statuses:
                 status = self.token_statuses[token]
                 status.total_requests += 1
                 status.successful_requests += 1
                 status.last_success_time = time.time()
-                status.failure_count = 0  # 重置失败计数
+                status.failure_count = 0  # Reset penghitung kegagalan
 
                 if not status.is_available:
                     status.is_available = True
-                    logger.info(f"✅ Token 恢复可用: {token[:20]}...")
+                    logger.info(f"✅ Token pulih dan tersedia: {token[:20]}...")
 
     def mark_token_failure(self, token: str, error: Exception = None):
-        """标记 Token 使用失败"""
+        """Tandai penggunaan Token gagal"""
         with self._lock:
             if token in self.token_statuses:
                 status = self.token_statuses[token]
@@ -317,20 +317,20 @@ class TokenPool:
 
                 if status.failure_count >= self.failure_threshold:
                     status.is_available = False
-                    logger.warning(f"🚫 Token 已禁用: {token[:20]}... (失败 {status.failure_count} 次)")
+                    logger.warning(f"🚫 Token telah dinonaktifkan: {token[:20]}... (gagal {status.failure_count} kali)")
 
     def get_token_id(self, token: str) -> Optional[int]:
-        """获取 Token 的数据库 ID"""
+        """Dapatkan ID database Token"""
         return self.token_id_map.get(token)
 
     def get_pool_status(self) -> Dict:
-        """获取 Token 池状态信息"""
+        """Dapatkan informasi status kumpulan Token"""
         with self._lock:
             available_count = len(self._get_available_user_tokens())
             total_count = len(self.token_statuses)
             healthy_count = sum(1 for status in self.token_statuses.values() if status.is_healthy)
 
-            # 统计各类型 Token
+            # Statistik berbagai jenis Token
             user_count = sum(1 for s in self.token_statuses.values() if s.token_type == "user")
             guest_count = sum(1 for s in self.token_statuses.values() if s.token_type == "guest")
             unknown_count = sum(1 for s in self.token_statuses.values() if s.token_type == "unknown")
@@ -366,48 +366,48 @@ class TokenPool:
             return status_info
 
     def update_token_type(self, token: str, token_type: str):
-        """更新 Token 类型（用于健康检查后更新）"""
+        """Perbarui jenis Token (untuk pembaruan setelah pemeriksaan kesehatan)"""
         with self._lock:
             if token in self.token_statuses:
                 old_type = self.token_statuses[token].token_type
                 self.token_statuses[token].token_type = token_type
 
                 if old_type != token_type:
-                    logger.info(f"🔄 更新 Token 类型: {token[:20]}... {old_type} → {token_type}")
+                    logger.info(f"🔄 Perbarui jenis Token: {token[:20]}... {old_type} → {token_type}")
 
     async def health_check_token(self, token: str) -> bool:
         """
-        异步健康检查单个 Token（使用 Z.AI 官方认证接口）
+        Pemeriksaan kesehatan Token tunggal secara asinkron (menggunakan antarmuka autentikasi resmi Z.AI)
 
         Args:
-            token: 要检查的 Token
+            token: Token yang akan diperiksa
 
         Returns:
-            Token 是否健康（True = 有效的认证用户 Token）
+            Apakah Token sehat (True = Token pengguna terautentikasi yang valid)
         """
         token_type, is_valid, error_message = await ZAITokenValidator.validate_token(token)
 
-        # 更新 Token 类型
+        # Perbarui jenis Token
         self.update_token_type(token, token_type)
 
-        # 更新状态
+        # Perbarui status
         if is_valid:
             self.mark_token_success(token)
         else:
-            self.mark_token_failure(token, Exception(error_message or "验证失败"))
+            self.mark_token_failure(token, Exception(error_message or "Validasi gagal"))
 
         return is_valid
 
     async def health_check_all(self):
-        """异步健康检查所有 Token"""
+        """Pemeriksaan kesehatan semua Token secara asinkron"""
         if not self.token_statuses:
-            logger.warning("⚠️ Token 池为空，跳过健康检查")
+            logger.warning("⚠️ Kumpulan Token kosong, lewati pemeriksaan kesehatan")
             return
 
         total_tokens = len(self.token_statuses)
-        logger.info(f"🔍 开始 Token 池健康检查... (共 {total_tokens} 个 Token)")
+        logger.info(f"🔍 Mulai pemeriksaan kesehatan kumpulan Token... (total {total_tokens} Token)")
 
-        # 并发执行所有 Token 的健康检查
+        # Eksekusi pemeriksaan kesehatan semua Token secara konkuren
         tasks = [
             self.health_check_token(token)
             for token in self.token_statuses.keys()
@@ -415,7 +415,7 @@ class TokenPool:
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # 统计结果
+        # Statistik hasil
         healthy_count = sum(1 for r in results if r is True)
         failed_count = sum(1 for r in results if r is False)
         exception_count = sum(1 for r in results if isinstance(r, Exception))
@@ -423,44 +423,44 @@ class TokenPool:
         health_rate = (healthy_count / total_tokens) * 100 if total_tokens > 0 else 0
 
         if healthy_count == 0 and total_tokens > 0:
-            logger.warning(f"⚠️ 健康检查完成: 0/{total_tokens} 个 Token 健康 - 请检查 Token 配置")
+            logger.warning(f"⚠️ Pemeriksaan kesehatan selesai: 0/{total_tokens} Token sehat - Silakan periksa konfigurasi Token")
         elif failed_count > 0:
-            logger.warning(f"⚠️ 健康检查完成: {healthy_count}/{total_tokens} 个 Token 健康 ({health_rate:.1f}%)")
+            logger.warning(f"⚠️ Pemeriksaan kesehatan selesai: {healthy_count}/{total_tokens} Token sehat ({health_rate:.1f}%)")
         else:
-            logger.info(f"✅ 健康检查完成: {healthy_count}/{total_tokens} 个 Token 健康")
+            logger.info(f"✅ Pemeriksaan kesehatan selesai: {healthy_count}/{total_tokens} Token sehat")
 
         if exception_count > 0:
-            logger.error(f"💥 {exception_count} 个 Token 检查异常")
+            logger.error(f"💥 {exception_count} Token mengalami pengecualian pemeriksaan")
 
     async def sync_from_database(self, provider: str = "zai"):
         """
-        从数据库同步 Token 状态（禁用/启用状态）
+        Sinkronkan status Token dari database (status nonaktif/aktif)
 
         Args:
-            provider: 提供商名称
+            provider: Nama penyedia
 
-        说明：
-            - 从数据库读取最新的 Token 启用状态
-            - 如果数据库中 Token 被禁用，则从池中移除
-            - 如果数据库中有新增的启用 Token，则添加到池中
-            - 保留现有 Token 的运行时统计（请求数、成功率等）
+        Penjelasan:
+            - Baca status aktivasi Token terbaru dari database
+            - Jika Token dinonaktifkan dalam database, hapus dari kumpulan
+            - Jika ada Token aktif baru dalam database, tambahkan ke kumpulan
+            - Pertahankan statistik runtime Token yang ada (jumlah permintaan, tingkat keberhasilan, dll.)
         """
         from app.services.token_dao import get_token_dao
 
         dao = get_token_dao()
 
-        # 从数据库加载所有启用的认证用户 Token
+        # Muat semua Token pengguna terautentikasi yang diaktifkan dari database
         token_records = await dao.get_tokens_by_provider(provider, enabled_only=True)
 
-        # 构建数据库中的 Token 映射
+        # Bangun pemetaan Token dalam database
         db_tokens = {
             record["token"]: (record["id"], record.get("token_type", "unknown"))
             for record in token_records
-            if record.get("token_type") != "guest"  # 过滤 guest token
+            if record.get("token_type") != "guest"  # Saring Token guest
         }
 
         with self._lock:
-            # 1. 移除已在数据库中禁用的 Token
+            # 1. Hapus Token yang telah dinonaktifkan dalam database
             tokens_to_remove = []
             for token_value in list(self.token_statuses.keys()):
                 if token_value not in db_tokens:
@@ -469,9 +469,9 @@ class TokenPool:
             for token_value in tokens_to_remove:
                 del self.token_statuses[token_value]
                 del self.token_id_map[token_value]
-                logger.info(f"🗑️ 从池中移除已禁用 Token: {token_value[:20]}...")
+                logger.info(f"🗑️ Hapus Token yang dinonaktifkan dari kumpulan: {token_value[:20]}...")
 
-            # 2. 添加新启用的 Token
+            # 2. Tambahkan Token yang baru diaktifkan
             new_tokens_count = 0
             for token_value, (token_id, token_type) in db_tokens.items():
                 if token_value not in self.token_statuses:
@@ -482,20 +482,20 @@ class TokenPool:
                     )
                     self.token_id_map[token_value] = token_id
                     new_tokens_count += 1
-                    logger.info(f"➕ 添加新启用 Token: {token_value[:20]}...")
+                    logger.info(f"➕ Tambahkan Token yang baru diaktifkan: {token_value[:20]}...")
 
-            # 3. 更新现有 Token 的类型（如果数据库中有更新）
+            # 3. Perbarui jenis Token yang ada (jika ada pembaruan dalam database)
             for token_value, (token_id, token_type) in db_tokens.items():
                 if token_value in self.token_statuses:
                     old_type = self.token_statuses[token_value].token_type
                     if old_type != token_type:
                         self.token_statuses[token_value].token_type = token_type
-                        logger.info(f"🔄 更新 Token 类型: {token_value[:20]}... {old_type} → {token_type}")
+                        logger.info(f"🔄 Perbarui jenis Token: {token_value[:20]}... {old_type} → {token_type}")
 
             logger.info(
-                f"✅ Token 池同步完成: "
-                f"当前 {len(self.token_statuses)} 个 Token "
-                f"(移除 {len(tokens_to_remove)}, 新增 {new_tokens_count})"
+                f"✅ Sinkronisasi kumpulan Token selesai: "
+                f"Saat ini {len(self.token_statuses)} Token "
+                f"(hapus {len(tokens_to_remove)}, tambah baru {new_tokens_count})"
             )
 
 
@@ -517,15 +517,15 @@ async def initialize_token_pool_from_db(
     recovery_timeout: int = 1800
 ) -> Optional[TokenPool]:
     """
-    从数据库初始化全局 Token 池
+    Inisialisasi kumpulan Token global dari database
 
     Args:
-        provider: 提供商名称 (zai, k2think, longcat)
-        failure_threshold: 失败阈值
-        recovery_timeout: 恢复超时时间（秒）
+        provider: Nama penyedia (zai, k2think, longcat)
+        failure_threshold: Ambang kegagalan
+        recovery_timeout: Waktu habis pemulihan (detik)
 
     Returns:
-        TokenPool 实例（即使没有 Token 也会创建空池）
+        Instance TokenPool (akan membuat kumpulan kosong bahkan tanpa Token)
     """
     global _token_pool
 
@@ -533,10 +533,10 @@ async def initialize_token_pool_from_db(
 
     dao = get_token_dao()
 
-    # 从数据库加载 Token（只加载启用的认证用户 Token）
+    # Muat Token dari database (hanya muat Token pengguna terautentikasi yang diaktifkan)
     token_records = await dao.get_tokens_by_provider(provider, enabled_only=True)
 
-    # 转换为 TokenPool 所需格式
+    # Konversi ke format yang dibutuhkan TokenPool
     tokens = []
     if token_records:
         tokens = [
@@ -544,7 +544,7 @@ async def initialize_token_pool_from_db(
             for record in token_records
         ]
 
-        # 过滤掉 guest token（不应该在数据库中，但防御性检查）
+        # Filter Token guest (seharusnya tidak ada dalam database, tetapi pemeriksaan defensif)
         user_tokens = [
             (tid, tval, ttype) for tid, tval, ttype in tokens
             if ttype != "guest"
@@ -552,27 +552,27 @@ async def initialize_token_pool_from_db(
 
         if len(user_tokens) < len(tokens):
             guest_count = len(tokens) - len(user_tokens)
-            logger.warning(f"⚠️ 过滤了 {guest_count} 个匿名用户 Token")
+            logger.warning(f"⚠️ Memfilter {guest_count} Token pengguna anonim")
 
         tokens = user_tokens
 
-    # 始终创建 Token 池实例（即使为空）
+    # Selalu buat instance kumpulan Token (bahkan jika kosong)
     with _pool_lock:
         _token_pool = TokenPool(tokens, failure_threshold, recovery_timeout)
 
         if not tokens:
-            logger.warning(f"⚠️ {provider} 没有有效的认证用户 Token，已创建空 Token 池")
+            logger.warning(f"⚠️ {provider} tidak memiliki Token pengguna terautentikasi yang valid, telah membuat kumpulan Token kosong")
         else:
-            logger.info(f"🔧 从数据库初始化 Token 池（{provider}），共 {len(tokens)} 个 Token")
+            logger.info(f"🔧 Inisialisasi kumpulan Token dari database ({provider}), total {len(tokens)} Token")
 
         return _token_pool
 
 
 async def sync_token_stats_to_db():
     """
-    将内存中的 Token 统计同步到数据库
+    Sinkronkan statistik Token dalam memori ke database
 
-    应在服务关闭或定期调用，确保统计数据不丢失
+    Harus dipanggil saat layanan ditutup atau secara berkala, untuk memastikan statistik tidak hilang
     """
     pool = get_token_pool()
     if not pool:
@@ -586,7 +586,7 @@ async def sync_token_stats_to_db():
         for token, status in pool.token_statuses.items():
             token_id = status.token_id
 
-            # 更新数据库统计（简化版，实际可能需要增量更新）
+            # Perbarui statistik database (versi sederhana, implementasi aktual mungkin memerlukan pembaruan inkremental)
             if status.successful_requests > 0:
                 for _ in range(status.successful_requests):
                     await dao.record_success(token_id)
@@ -595,4 +595,4 @@ async def sync_token_stats_to_db():
                 for _ in range(status.total_requests - status.successful_requests):
                     await dao.record_failure(token_id)
 
-    logger.info("✅ Token 统计已同步到数据库")
+    logger.info("✅ Statistik Token telah disinkronkan ke database")

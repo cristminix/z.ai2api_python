@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-基础提供商抽象层
-定义统一的提供商接口规范
+Lapisan Abstrak Penyedia Dasar
+Mendefinisikan spesifikasi antarmuka penyedia yang seragam
 """
 
 import json
@@ -21,7 +21,7 @@ logger = get_logger()
 
 @dataclass
 class ProviderConfig:
-    """提供商配置"""
+    """Konfigurasi Penyedia"""
     name: str
     api_endpoint: str
     timeout: int = 30
@@ -31,7 +31,7 @@ class ProviderConfig:
 
 @dataclass
 class ProviderResponse:
-    """提供商响应"""
+    """Respon Penyedia"""
     success: bool
     content: str = ""
     error: Optional[str] = None
@@ -40,10 +40,10 @@ class ProviderResponse:
 
 
 class BaseProvider(ABC):
-    """基础提供商抽象类"""
+    """Kelas Abstrak Penyedia Dasar"""
     
     def __init__(self, config: ProviderConfig):
-        """初始化提供商"""
+        """Inisialisasi Penyedia"""
         self.config = config
         self.name = config.name
         self.logger = get_logger()
@@ -55,28 +55,28 @@ class BaseProvider(ABC):
         **kwargs
     ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
         """
-        聊天完成接口
+        Antarmuka Penyelesaian Chat
         
         Args:
-            request: OpenAI格式的请求
-            **kwargs: 额外参数
+            request: Permintaan format OpenAI
+            **kwargs: Parameter tambahan
             
         Returns:
-            非流式: Dict[str, Any] - OpenAI格式的响应
-            流式: AsyncGenerator[str, None] - SSE格式的流式响应
+            Non-streaming: Dict[str, Any] - Respon format OpenAI
+            Streaming: AsyncGenerator[str, None] - Respon streaming format SSE
         """
         pass
     
     @abstractmethod
     async def transform_request(self, request: OpenAIRequest) -> Dict[str, Any]:
         """
-        转换OpenAI请求为提供商特定格式
+        Mengubah permintaan OpenAI ke format penyedia spesifik
         
         Args:
-            request: OpenAI格式的请求
+            request: Permintaan format OpenAI
             
         Returns:
-            Dict[str, Any]: 提供商特定格式的请求
+            Dict[str, Any]: Permintaan format penyedia spesifik
         """
         pass
     
@@ -87,23 +87,23 @@ class BaseProvider(ABC):
         request: OpenAIRequest
     ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
         """
-        转换提供商响应为OpenAI格式
+        Mengubah respon penyedia ke format OpenAI
         
         Args:
-            response: 提供商的原始响应
-            request: 原始请求（用于构造响应）
+            response: Respon asli penyedia
+            request: Permintaan asli (digunakan untuk membuat respon)
             
         Returns:
-            Union[Dict[str, Any], AsyncGenerator[str, None]]: OpenAI格式的响应
+            Union[Dict[str, Any], AsyncGenerator[str, None]]: Respon format OpenAI
         """
         pass
     
     def get_supported_models(self) -> List[str]:
-        """获取支持的模型列表"""
+        """Mendapatkan daftar model yang didukung"""
         return []
     
     def create_chat_id(self) -> str:
-        """生成聊天ID"""
+        """Membuat ID chat"""
         return f"chatcmpl-{uuid.uuid4().hex}"
     
     def create_openai_chunk(
@@ -113,7 +113,7 @@ class BaseProvider(ABC):
         delta: Dict[str, Any], 
         finish_reason: Optional[str] = None
     ) -> Dict[str, Any]:
-        """创建OpenAI格式的流式响应块"""
+        """Membuat chunk respon streaming format OpenAI"""
         return {
             "id": chat_id,
             "object": "chat.completion.chunk",
@@ -129,13 +129,13 @@ class BaseProvider(ABC):
         }
     
     def create_openai_response(
-        self, 
-        chat_id: str, 
-        model: str, 
-        content: str, 
+        self,
+        chat_id: str,
+        model: str,
+        content: str,
         usage: Optional[Dict[str, int]] = None
     ) -> Dict[str, Any]:
-        """创建OpenAI格式的非流式响应"""
+        """Membuat respon non-streaming format OpenAI"""
         return {
             "id": chat_id,
             "object": "chat.completion",
@@ -166,13 +166,13 @@ class BaseProvider(ABC):
         reasoning_content: str = None,
         usage: Optional[Dict[str, int]] = None
     ) -> Dict[str, Any]:
-        """创建包含推理内容的OpenAI格式非流式响应"""
+        """Membuat respon non-streaming format OpenAI dengan konten penalaran"""
         message = {
             "role": "assistant",
             "content": content
         }
 
-        # 只有当推理内容存在且不为空时才添加
+        # Hanya tambahkan jika konten penalaran ada dan tidak kosong
         if reasoning_content and reasoning_content.strip():
             message["reasoning_content"] = reasoning_content
 
@@ -196,29 +196,29 @@ class BaseProvider(ABC):
         }
 
     async def format_sse_chunk(self, chunk: Dict[str, Any]) -> str:
-        """格式化SSE响应块"""
+        """Memformat chunk respon SSE"""
         return f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
     
     async def format_sse_done(self) -> str:
-        """格式化SSE结束标记"""
+        """Memformat marker akhir SSE"""
         return "data: [DONE]\n\n"
     
     def log_request(self, request: OpenAIRequest):
-        """记录请求日志"""
-        self.logger.info(f"🔄 {self.name} 处理请求: {request.model}")
-        self.logger.debug(f"  消息数量: {len(request.messages)}")
-        self.logger.debug(f"  流式模式: {request.stream}")
+        """Mencatat log permintaan"""
+        self.logger.info(f"🔄 {self.name} Memproses permintaan: {request.model}")
+        self.logger.debug(f"  Jumlah pesan: {len(request.messages)}")
+        self.logger.debug(f"  Mode streaming: {request.stream}")
         
     def log_response(self, success: bool, error: Optional[str] = None):
-        """记录响应日志"""
+        """Mencatat log respon"""
         if success:
-            self.logger.info(f"✅ {self.name} 响应成功")
+            self.logger.info(f"✅ {self.name} Respon berhasil")
         else:
-            self.logger.error(f"❌ {self.name} 响应失败: {error}")
+            self.logger.error(f"❌ {self.name} Respon gagal: {error}")
     
     def handle_error(self, error: Exception, context: str = "") -> Dict[str, Any]:
-        """统一错误处理"""
-        error_msg = f"{self.name} {context} 错误: {str(error)}"
+        """Penanganan error yang seragam"""
+        error_msg = f"{self.name} {context} Error: {str(error)}"
         self.logger.error(error_msg)
         
         return {
@@ -231,38 +231,38 @@ class BaseProvider(ABC):
 
 
 class ProviderRegistry:
-    """提供商注册表"""
+    """Registry Penyedia"""
     
     def __init__(self):
         self._providers: Dict[str, BaseProvider] = {}
         self._model_mapping: Dict[str, str] = {}
     
     def register(self, provider: BaseProvider, models: List[str]):
-        """注册提供商"""
+        """Mendaftarkan penyedia"""
         self._providers[provider.name] = provider
         for model in models:
             self._model_mapping[model] = provider.name
-        logger.info(f"📝 注册提供商: {provider.name}, 模型: {models}")
+        logger.info(f"📝 Mendaftarkan penyedia: {provider.name}, model: {models}")
     
     def get_provider(self, model: str) -> Optional[BaseProvider]:
-        """根据模型获取提供商"""
+        """Mendapatkan penyedia berdasarkan model"""
         provider_name = self._model_mapping.get(model)
         if provider_name:
             return self._providers.get(provider_name)
         return None
     
     def get_provider_by_name(self, name: str) -> Optional[BaseProvider]:
-        """根据名称获取提供商"""
+        """Mendapatkan penyedia berdasarkan nama"""
         return self._providers.get(name)
     
     def list_models(self) -> List[str]:
-        """列出所有支持的模型"""
+        """Mendaftar semua model yang didukung"""
         return list(self._model_mapping.keys())
     
     def list_providers(self) -> List[str]:
-        """列出所有提供商"""
+        """Mendaftar semua penyedia"""
         return list(self._providers.keys())
 
 
-# 全局提供商注册表
+# Registry penyedia global
 provider_registry = ProviderRegistry()
