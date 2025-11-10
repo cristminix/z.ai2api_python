@@ -719,7 +719,15 @@ class ZAIProvider(BaseProvider):
                     )
 
                     if not response.is_success:
-                        error_msg = f"Z.AI API Error: {response.status_code}"
+                        try:
+                            error_detail = await response.aread()
+                            error_text = error_detail.decode('utf-8', errors='ignore')
+                            if error_text:
+                                error_msg = f"Z.AI API Error: {response.status_code} - {error_text}"
+                            else:
+                                error_msg = f"Z.AI API Error: {response.status_code}"
+                        except Exception:
+                            error_msg = f"Z.AI API Error: {response.status_code}"
                         self.log_response(False, error_msg)
                         return self.handle_error(Exception(error_msg))
 
@@ -775,7 +783,7 @@ class ZAIProvider(BaseProvider):
                         else:
                             error_response = {
                                 "error": {
-                                    "message": f"Upstream error: {response.status_code}",
+                                    "message": f"Upstream error: {response.status_code} - {error_msg}" if error_msg else f"Upstream error: {response.status_code}",
                                     "type": "upstream_error",
                                     "code": response.status_code
                                 }

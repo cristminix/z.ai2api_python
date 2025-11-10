@@ -49,7 +49,7 @@ async def handle_non_stream_response(stream_response, request: OpenAIRequest) ->
     """Menangani respons non-streaming"""
     logger.info("📄 Mulai menangani respons non-streaming")
 
-    # 收集所有流式数据
+    # Mengumpulkan semua data streaming
     full_content = []
     async for chunk_data in stream_response():
         if chunk_data.startswith("data: "):
@@ -66,7 +66,7 @@ async def handle_non_stream_response(stream_response, request: OpenAIRequest) ->
                 except json.JSONDecodeError:
                     continue
 
-    # 构建响应
+    # Membangun respons
     response_data = OpenAIResponse(
         id=f"chatcmpl-{int(time.time())}",
         object="chat.completion",
@@ -101,7 +101,7 @@ async def list_models():
         return JSONResponse(content=models_data)
     except Exception as e:
         logger.error(f"❌ Gagal mendapatkan daftar model: {e}")
-        # 返回默认模型列表作为后备
+        # Mengembalikan daftar model default sebagai cadangan
         current_time = int(time.time())
         fallback_response = ModelsResponse(
             data=[
@@ -120,7 +120,7 @@ async def chat_completions(request: OpenAIRequest, authorization: str = Header(.
     role = request.messages[0].role if request.messages else "unknown"
     logger.info(f"😶‍🌫️ Menerima permintaan klien - Model: {request.model}, Streaming: {request.stream}, Jumlah pesan: {len(request.messages)}, Peran: {role}, Jumlah tools: {len(request.tools) if request.tools else 0}")
 
-    # 获取提供商信息（用于统计）
+    # Mendapatkan informasi provider (untuk statistik)
     provider = "unknown"
 
     try:
@@ -133,17 +133,17 @@ async def chat_completions(request: OpenAIRequest, authorization: str = Header(.
             if api_key != settings.AUTH_TOKEN:
                 raise HTTPException(status_code=401, detail="Invalid API key")
 
-        # 使用多提供商路由器处理请求
+        # Menggunakan router multi-provider untuk menangani permintaan
         router_instance = get_provider_router_instance()
 
-        # 从路由器获取提供商信息
+        # Mendapatkan informasi provider dari router
         provider_info = router_instance.get_provider_for_model(request.model)
         if provider_info:
             provider = provider_info.get("provider", "unknown")
 
         result = await router_instance.route_request(request)
 
-        # 检查是否有错误
+        # Memeriksa apakah ada error
         if isinstance(result, dict) and "error" in result:
             error_info = result["error"]
 
@@ -152,11 +152,11 @@ async def chat_completions(request: OpenAIRequest, authorization: str = Header(.
             else:
                 raise HTTPException(status_code=500, detail=error_info["message"])
 
-        # 处理响应
+        # Menangani respons
         if request.stream:
-            # 流式响应
+            # Respons streaming
             if hasattr(result, '__aiter__'):
-                # 结果是异步生成器
+                # Hasil adalah async generator
                 return StreamingResponse(
                     result,
                     media_type="text/event-stream",
@@ -167,18 +167,18 @@ async def chat_completions(request: OpenAIRequest, authorization: str = Header(.
                     }
                 )
             else:
-                # 结果是字典，可能包含错误
+                # Hasil adalah dictionary, mungkin mengandung error
                 raise HTTPException(status_code=500, detail="Expected streaming response but got non-streaming result")
         else:
-            # 非流式响应
+            # Respons non-streaming
             if isinstance(result, dict):
                 return JSONResponse(content=result)
             else:
-                # 如果是异步生成器，需要收集所有内容
+                # Jika adalah async generator, perlu mengumpulkan semua konten
                 return await handle_non_stream_response(result, request)
 
     except HTTPException as http_exc:
-        # 重新抛出 HTTP 异常
+        # Melempar kembali HTTP exception
         raise
     except Exception as e:
         logger.error(f"❌ Gagal memproses permintaan: {e}")
