@@ -746,7 +746,7 @@ class ZAIProvider(BaseProvider):
                 http2=True,
                 proxy=proxies,
             ) as client:
-                self.logger.info(f"🎯 Sending request to Z.AI: {transformed['url']}")
+                # self.logger.info(f"🎯 Sending request to Z.AI: {transformed['url']}")
                 # self.logger.info(f"📦 请求体 model: {transformed['body']['model']}")
                 # self.logger.info(f"📦 请求体 messages: {json.dumps(transformed['body']['messages'], ensure_ascii=False)}")
                 async with client.stream(
@@ -1083,9 +1083,9 @@ class ZAIProvider(BaseProvider):
             yield "data: [DONE]\n\n"
     
     async def _handle_non_stream_response(
-        self, 
-        response: httpx.Response, 
-        chat_id: str, 
+        self,
+        response: httpx.Response,
+        chat_id: str,
         model: str
     ) -> Dict[str, Any]:
         """Memproses respons non-streaming
@@ -1096,6 +1096,7 @@ class ZAIProvider(BaseProvider):
         """
         final_content = ""
         reasoning_content = ""
+        all_content_buffer = ""  # Buffer untuk menyimpan semua konten guna ekstraksi tool_call
         usage_info: Dict[str, int] = {
             "prompt_tokens": 0,
             "completion_tokens": 0,
@@ -1165,6 +1166,7 @@ class ZAIProvider(BaseProvider):
                         else:
                             cleaned = delta_content
                         reasoning_content += cleaned
+                        all_content_buffer += cleaned  # Tambahkan ke buffer untuk ekstraksi tool_call
 
                 # Agregasi fase jawaban
                 elif phase == "answer":
@@ -1173,8 +1175,10 @@ class ZAIProvider(BaseProvider):
                         content_after = edit_content.split("</details>\n")[-1]
                         if content_after:
                             final_content += content_after
+                            all_content_buffer += content_after  # Tambahkan ke buffer untuk ekstraksi tool_call
                     elif delta_content:
                         final_content += delta_content
+                        all_content_buffer += delta_content  # Tambahkan ke buffer untuk ekstraksi tool_call
 
         except Exception as e:
             self.logger.error(f"❌ Error memproses respons non-streaming: {e}")
@@ -1182,6 +1186,18 @@ class ZAIProvider(BaseProvider):
             self.logger.error(traceback.format_exc())
             # Mengembalikan respons error terpadu
             return self.handle_error(e, "Agregasi non-streaming")
+
+        # Mengekstrak tool_calls dari buffer konten
+        tool_calls = None
+
+        if all_content_buffer.strip():
+            tool_calls, cleaned_content = parse_and_extract_tool_calls(all_content_buffer)
+
+            # Jika tool_calls ditemukan, gunakan konten yang telah dibersihkan
+            if tool_calls:
+                self.logger.info(f"🔧 Extracted {len(tool_calls)} tool calls from non-streaming response")
+                # Gunakan konten yang telah dibersihkan dari tool JSON
+                final_content = cleaned_content
 
         # Membersihkan dan mengembalikan
         final_content = (final_content or "").strip()
@@ -1191,11 +1207,42 @@ class ZAIProvider(BaseProvider):
         if not final_content and reasoning_content:
             final_content = reasoning_content
 
-        # Mengembalikan respons standar yang mengandung konten penalaran (jika tidak ada penalaran maka tidak akan dibawa)
-        return self.create_openai_response_with_reasoning(
-            chat_id,
-            model,
-            final_content,
-            reasoning_content,
-            usage_info,
-        )
+        # Mengembalikan respons standar yang mengandung konten penalaran dan/atau tool_calls (jika tidak ada penalaran maka tidak akan dibawa)
+        if tool_calls:
+            # Kembalikan dengan tool_calls
+            message = {
+                "role": "assistant",
+                "tool_calls": tool_calls
+            }
+
+            # Tambahkan content jika ada
+            if final_content:
+                message["content"] = final_content
+
+            # Tambahkan reasoning_content jika ada
+            if reasoning_content and reasoning_content.strip():
+                message["reasoning_content"] = reasoning_content
+
+            return {
+                "id": f"chatcmpl-{int(time.time())}",
+                "object": "chat.completion",
+                "created": int(time.time()),
+                "model": model,
+                "choices": [{
+                    "index": 0,
+                    "message": message,
+                    "finish_reason": "tool_calls",
+                    "logprobs": None,
+                }],
+                "usage": usage_info,
+                "system_fingerprint": f"fp_{self.name}_001",
+            }
+        else:
+            # Kembalikan dengan hanya konten dan reasoning
+            return self.create_openai_response_with_reasoning(
+                chat_id,
+                model,
+                final_content,
+                reasoning_content,
+                usage_info,
+            )
