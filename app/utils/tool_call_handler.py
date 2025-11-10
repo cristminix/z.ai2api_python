@@ -18,7 +18,7 @@ def generate_tool_prompt(tools: Optional[List[Dict[str, Any]]]) -> str:
     Konversi definisi alat OpenAI ke dokumen instruksi format Markdown
 
     Args:
-        tools: OpenAI 格式的工具定义列表
+        tools: Daftar definisi alat dalam format OpenAI
 
     Returns:
         str: Instruksi penggunaan alat dalam format Markdown
@@ -37,13 +37,13 @@ def generate_tool_prompt(tools: Optional[List[Dict[str, Any]]]) -> str:
         function_description = function_spec.get("description", "")
         parameters = function_spec.get("parameters", {})
 
-        # 创建结构化的工具定义
+        # Buat definisi alat yang terstruktur
         tool_info = [
             f"## {function_name}",
             f"**Purpose**: {function_description}"
         ]
 
-        # 添加参数详情
+        # Tambahkan detail parameter
         parameter_properties = parameters.get("properties", {})
         required_parameters = set(parameters.get("required", []))
 
@@ -58,7 +58,7 @@ def generate_tool_prompt(tools: Optional[List[Dict[str, Any]]]) -> str:
 
         tool_definitions.append("\n".join(tool_info))
 
-    # 组合完整的提示词
+    # Gabungkan prompt lengkap
     prompt = (
         "\n\n---\n"
         "# Available Tools\n\n"
@@ -75,7 +75,7 @@ def generate_tool_prompt(tools: Optional[List[Dict[str, Any]]]) -> str:
         "---\n\n"
     )
 
-    logger.debug(f"生成工具提示词,包含 {len(tool_definitions)} 个工具定义")
+    logger.debug(f"Menghasilkan prompt alat, berisi {len(tool_definitions)} definisi alat")
     return prompt
 
 
@@ -88,12 +88,12 @@ def process_messages_with_tools(
     Suntikkan definisi alat ke daftar pesan
 
     Args:
-        messages: 原始消息列表
-        tools: 工具定义列表
-        tool_choice: 工具选择策略 ("auto", "none", 等)
+        messages: Daftar pesan asli
+        tools: Daftar definisi alat
+        tool_choice: Strategi pemilihan alat ("auto", "none", dll.)
 
     Returns:
-        List[Dict]: 处理后的消息列表
+        List[Dict]: Daftar pesan yang telah diproses
     """
     if not tools or tool_choice == "none":
         return messages
@@ -106,13 +106,13 @@ def process_messages_with_tools(
     has_system = any(m.get("role") == "system" for m in messages)
 
     if has_system:
-        # 如果有 system 消息,将工具提示追加到第一个 system 消息
+        # Jika ada pesan system, tambahkan prompt alat ke pesan system pertama
         for msg in messages:
             if msg.get("role") == "system":
                 new_msg = msg.copy()
                 content = new_msg.get("content", "")
                 if isinstance(content, list):
-                    # 多模态内容
+                    # Konten multimodal
                     content_str = " ".join([
                         item.get("text", "") if item.get("type") == "text" else ""
                         for item in content
@@ -124,7 +124,7 @@ def process_messages_with_tools(
             else:
                 processed.append(msg)
     else:
-        # 没有 system 消息,创建一个新的 system 消息
+        # Tidak ada pesan system, buat pesan system baru
         processed.append({
             "role": "system",
             "content": f"You are a helpful assistant with access to tools.{tools_prompt}"
@@ -140,10 +140,10 @@ def parse_and_extract_tool_calls(content: str) -> Tuple[Optional[List[Dict[str, 
     Ekstrak JSON tool_calls dari konten respons
     
     Args:
-        content: 模型返回的文本内容
+        content: Konten teks yang dikembalikan model
 
     Returns:
-        Tuple[Optional[List], str]: (提取的 tool_calls 列表, 清理后的内容)
+        Tuple[Optional[List], str]: (Daftar tool_calls yang diekstrak, konten yang dibersihkan)
     """
     if not content or not content.strip():
         return None, content
@@ -151,8 +151,8 @@ def parse_and_extract_tool_calls(content: str) -> Tuple[Optional[List[Dict[str, 
     tool_calls = None
     cleaned_content = content
 
-    # 方法1: 尝试解析 JSON 代码块中的 tool_calls
-    # 匹配 ```json ... ``` 或 ```...```
+    # Metode 1: Coba parsing tool_calls dari blok kode JSON
+    # Cocokkan ```json ... ``` atau ```...```
     json_block_pattern = r'```(?:json)?\s*\n?(\{[\s\S]*?\})\s*\n?```'
     json_blocks = re.findall(json_block_pattern, content)
 
@@ -162,13 +162,13 @@ def parse_and_extract_tool_calls(content: str) -> Tuple[Optional[List[Dict[str, 
             if "tool_calls" in parsed_data:
                 tool_calls = parsed_data["tool_calls"]
                 if tool_calls and isinstance(tool_calls, list):
-                    # 确保 arguments 字段是字符串
+                    # Pastikan field arguments adalah string
                     for tc in tool_calls:
                         if tc.get("function"):
                             func = tc["function"]
                             if func.get("arguments"):
                                 if isinstance(func["arguments"], dict):
-                                    # 转换对象为 JSON 字符串
+                                    # Konversi objek ke string JSON
                                     func["arguments"] = json.dumps(func["arguments"], ensure_ascii=False)
                                 elif not isinstance(func["arguments"], str):
                                     func["arguments"] = str(func["arguments"])
@@ -177,14 +177,14 @@ def parse_and_extract_tool_calls(content: str) -> Tuple[Optional[List[Dict[str, 
         except json.JSONDecodeError:
             continue
 
-    # 方法2: 尝试从文本中直接查找 JSON 对象
+    # Metode 2: Coba cari objek JSON langsung dari teks
     if not tool_calls:
-        # 查找包含 "tool_calls" 的 JSON 对象
+        # Cari objek JSON yang mengandung "tool_calls"
         i = 0
         scannable_text = content
         while i < len(scannable_text):
             if scannable_text[i] == '{':
-                # 尝试找到匹配的闭合括号
+                # Coba temukan kurung tutup yang cocok
                 brace_count = 1
                 j = i + 1
                 in_string = False
@@ -205,14 +205,14 @@ def parse_and_extract_tool_calls(content: str) -> Tuple[Optional[List[Dict[str, 
                     j += 1
 
                 if brace_count == 0:
-                    # 找到完整的 JSON 对象
+                    # Temukan objek JSON lengkap
                     json_candidate = scannable_text[i:j]
                     try:
                         parsed_data = json.loads(json_candidate)
                         if "tool_calls" in parsed_data:
                             tool_calls = parsed_data["tool_calls"]
                             if tool_calls and isinstance(tool_calls, list):
-                                # 确保 arguments 字段是字符串
+                                # Pastikan field arguments adalah string
                                 for tc in tool_calls:
                                     if tc.get("function"):
                                         func = tc["function"]
@@ -230,7 +230,7 @@ def parse_and_extract_tool_calls(content: str) -> Tuple[Optional[List[Dict[str, 
             else:
                 i += 1
 
-    # 清理内容 - 移除包含 tool_calls 的 JSON
+    # Bersihkan konten - Hapus JSON yang mengandung tool_calls
     if tool_calls:
         cleaned_content = remove_tool_json_content(content)
 
@@ -242,38 +242,38 @@ def remove_tool_json_content(content: str) -> str:
     Hapus panggilan alat JSON dari konten respons
 
     Args:
-        content: 原始响应内容
+        content: Konten respons asli
 
     Returns:
-        str: 清理后的内容
+        str: Konten yang telah dibersihkan
     """
     if not content:
         return content
 
-    # 步骤1: 移除 JSON 代码块中包含 tool_calls 的部分
+    # Langkah 1: Hapus bagian yang mengandung tool_calls dari blok kode JSON
     cleaned_text = content
 
-    # 匹配 ```json ... ``` 或 ```...```
+    # Cocokkan ```json ... ``` atau ```...```
     def replace_json_block(match):
         json_content = match.group(1)
         try:
             parsed_data = json.loads(json_content)
             if "tool_calls" in parsed_data:
-                return ""  # 移除整个代码块
+                return ""  # Hapus seluruh blok kode
         except json.JSONDecodeError:
             pass
-        return match.group(0)  # 保留原文
+        return match.group(0)  # Pertahankan teks asli
 
     json_block_pattern = r'```(?:json)?\s*\n?(\{[\s\S]*?\})\s*\n?```'
     cleaned_text = re.sub(json_block_pattern, replace_json_block, cleaned_text)
 
-    # 步骤2: 移除内联的 tool JSON - 使用括号平衡方法
+    # Langkah 2: Hapus tool JSON inline - gunakan metode penyeimbangan kurung
     result = []
     i = 0
 
     while i < len(cleaned_text):
         if cleaned_text[i] == '{':
-            # 尝试找到匹配的闭合括号
+            # Coba temukan kurung tutup yang cocok
             brace_count = 1
             j = i + 1
             in_string = False
@@ -294,18 +294,18 @@ def remove_tool_json_content(content: str) -> str:
                 j += 1
 
             if brace_count == 0:
-                # 找到完整的 JSON 对象,检查是否包含 tool_calls
+                # Temukan objek JSON lengkap, periksa apakah mengandung tool_calls
                 json_candidate = cleaned_text[i:j]
                 try:
                     parsed = json.loads(json_candidate)
                     if "tool_calls" in parsed:
-                        # 这是一个工具调用,跳过它
+                        # Ini adalah panggilan alat, lewati
                         i = j
                         continue
                 except json.JSONDecodeError:
                     pass
 
-            # 不是工具调用或无法解析,保留这个字符
+            # Bukan panggilan alat atau tidak dapat diparsing, pertahankan karakter ini
             result.append(cleaned_text[i])
             i += 1
         else:
@@ -314,7 +314,7 @@ def remove_tool_json_content(content: str) -> str:
 
     cleaned_result = "".join(result).strip()
 
-    # 移除多余的空白行
+    # Hapus baris kosong yang berlebihan
     cleaned_result = re.sub(r'\n{3,}', '\n\n', cleaned_result)
 
     logger.debug(f"Pembersihan konten selesai, panjang asli: {len(content)}, panjang setelah dibersihkan: {len(cleaned_result)}")
@@ -326,15 +326,15 @@ def content_to_string(content: Any) -> str:
     Konversi konten pesan ke string
 
     Args:
-        content: 消息内容,可能是字符串或列表(多模态)
+        content: Konten pesan, bisa berupa string atau list (multimodal)
 
     Returns:
-        str: 字符串格式的内容
+        str: Konten dalam format string
     """
     if isinstance(content, str):
         return content
     elif isinstance(content, list):
-        # 多模态内容,提取文本部分
+        # Konten multimodal, ekstrak bagian teks
         text_parts = []
         for item in content:
             if isinstance(item, dict):
